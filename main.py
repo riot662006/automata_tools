@@ -1,34 +1,26 @@
+import re
+
 from graphviz import Digraph
+from parser import parse_dfa_file
 
 g = Digraph('G', format='png', engine='dot')
 g.attr(rankdir='LR')
 g.attr('node', shape='circle', style='filled',
        fillcolor="lightgray", color='black')
 
-Q = {'q_1', 'q_2', 'q_3', 'q_E'}  # states
-Σ = {'0', '1'}  # alphabet
-δ = {
-    ('q_1', '0'): 'q_2',
-    ('q_1', '1'): 'q_E',
-    ('q_2', '0'): 'q_E',
-    ('q_2', '1'): 'q_3',
-    ('q_3', '0'): 'q_E',
-    ('q_3', '1'): 'q_E',
-    ('q_E', '0'): 'q_E',
-    ('q_E', '1'): 'q_E'
-}  # transition function
-q_0 = 'q_1'  # start state
-F = {'q_2', 'q_3'}  # accept states
+INPUT = 'example.dfauto'
+
+Q, Σ, δ, q0, F = parse_dfa_file(INPUT)
 
 for n in Q:
     subscript_split = n.split('_', 1)
     node_label = f"<{subscript_split[0]}<sub>{"_".join(subscript_split[1:])}</sub>>" if '_' in n else n
 
-    g.node(n, label=node_label,shape='doublecircle' if n in F else 'circle')
+    g.node(n, label=node_label, shape='doublecircle' if n in F else 'circle')
 
 # Invisible start arrow
 g.node('start', shape='point', width='0.01')
-g.edge('start', q_0)
+g.edge('start', q0)
 
 edges = {}
 for (src, sym), dst in δ.items():
