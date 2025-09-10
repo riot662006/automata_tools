@@ -21,7 +21,10 @@ q_0 = 'q_1'  # start state
 F = {'q_2', 'q_3'}  # accept states
 
 for n in Q:
-    g.node(n, shape='doublecircle' if n in F else 'circle')
+    subscript_split = n.split('_', 1)
+    node_label = f"<{subscript_split[0]}<sub>{"_".join(subscript_split[1:])}</sub>>" if '_' in n else n
+
+    g.node(n, label=node_label,shape='doublecircle' if n in F else 'circle')
 
 # Invisible start arrow
 g.node('start', shape='point', width='0.01')
