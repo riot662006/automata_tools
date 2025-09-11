@@ -10,7 +10,7 @@ g.attr('node', shape='circle', style='filled',
 
 INPUT = 'example.dfauto'
 
-Q, Σ, δ, q0, F = parse_dfa_file(INPUT)
+Q, Σ, δ, q0, F = parse_dfa_file(INPUT).get_tuples()
 
 for n in Q:
     subscript_split = n.split('_', 1)

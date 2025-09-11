@@ -1,7 +1,8 @@
+from custom_types import DFA
 from utils import parse_counted_list, Q_LABEL_RE, SIGMA_LABEL_RE
 
 
-def parse_dfa_file(path: str):
+def parse_dfa_file(path: str) -> DFA:
     with open(path, 'r') as f:
         lines = f.readlines()
 
@@ -38,4 +39,4 @@ def parse_dfa_file(path: str):
     if not F:
         raise ValueError("At least one accept state must be specified.")
 
-    return Q, Σ, δ, q0, F
+    return DFA(Q, Σ, δ, q0, F)
