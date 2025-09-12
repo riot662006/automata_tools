@@ -1,10 +1,9 @@
 import argparse
 from pathlib import Path
-import re
 
 from graphviz import Digraph
-from custom_types import DFA
-from parser import parse_dfa_file
+from automata.dfa import DFA
+from automata.parser import parse_dfa_file
 
 def html_label(name: str) -> str:
     """Render labels like q_12 as q<sub>12</sub> for Graphviz HTML-like labels."""

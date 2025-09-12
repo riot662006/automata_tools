@@ -1,5 +1,5 @@
-from custom_types import DFA
-from utils import parse_counted_list, Q_LABEL_RE, SIGMA_LABEL_RE
+from automata.dfa import DFA
+from automata.utils import parse_counted_list, Q_LABEL_RE, SIGMA_LABEL_RE
 
 
 def parse_dfa_file(path: str) -> DFA:
