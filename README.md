@@ -69,3 +69,7 @@ pip install =r requirements.txt
 Dependencies
 - `graphviz` (system binary + Python package. Download [here](https://graphviz.org/download) and make sure you add to PATH) 
 - Python >= 3.10
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
