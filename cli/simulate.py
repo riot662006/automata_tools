@@ -1,6 +1,7 @@
 import argparse
 
 from automata.parser import parse_dfa_file
+from automata.utils import cprint
 
 def main():
     ap  = argparse.ArgumentParser(description="Simulate DFA on input strings from a .dfauto file")
@@ -12,11 +13,14 @@ def main():
     
     for word in args.strings:
         try:
-            is_accepted = dfa.accepts(word)
+            accepted = dfa.accepts(word)
             
-            print(f"Input: {word!r} -> {'Accepted' if is_accepted else 'Rejected'}")
+            if accepted:
+                cprint(f"Input: {word!r} -> Accepted", color="green")
+            else:
+                cprint(f"Input: {word!r} -> Rejected", color="red")
         except ValueError as e:
-            print(f"Input: {word!r} -> Error: {e}")
+            cprint(f"Input: {word!r} -> Error: {e}", color="yellow")
 
 if __name__ == "__main__":
     main()

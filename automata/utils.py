@@ -1,5 +1,34 @@
 import re
 
+
+def cprint(message: str, color: str = "reset", *, bold: bool = False, end: str = "\n") -> None:
+    """
+    Print a colored message to the terminal (ANSI escape codes, no extra deps).
+
+    Args:
+        message: The text to print.
+        color:   One of {"green", "red", "yellow", "blue", "magenta", "cyan", "reset"}.
+        bold:    If True, apply bold style.
+        end:     Passed to print() (default newline).
+    """
+    codes = {
+        "green": "32",
+        "red": "31",
+        "yellow": "33",
+        "blue": "34",
+        "magenta": "35",
+        "cyan": "36",
+        "reset": "0",
+    }
+
+    code = codes.get(color, "0")
+    style = "1;" if bold else ""
+    start = f"\033[{style}{code}m"
+    reset = "\033[0m"
+
+    print(f"{start}{message}{reset}", end=end)
+
+
 COUNTED_LIST_RE = re.compile(r"""
     ^\s*
     (?P<count>\d+)                    # leading number
@@ -52,9 +81,10 @@ def parse_counted_list(s: str, label_re):
         raise ValueError(
             f"Count mismatch: number says {count} but list has {len(raw_items)} items."
         )
-    
+
     # Unique check
     if len(set(raw_items)) != len(raw_items):
-        raise ValueError("Duplicate items found in the list. Items must be unique.")
+        raise ValueError(
+            "Duplicate items found in the list. Items must be unique.")
 
     return count, raw_items
