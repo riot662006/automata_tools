@@ -29,9 +29,8 @@ def build_graph(dfa: DFA, *, engine="dot", rankdir="LR", node_fill="lightgray"):
 
     # Group multiple symbols on same edge
     grouped = {}
-    for (src, sym), dst in dfa.δ.items():
-        grouped.setdefault((src, dst), []).append(sym)
-    for (src, dst), syms in grouped.items():
-        g.edge(src, dst, label=", ".join(syms))
+    for (src, dst_syms) in dfa.edges.items():
+        for dst, syms in dst_syms.items():
+            g.edge(src, dst, label=", ".join(syms))
 
     return g
