@@ -33,6 +33,20 @@ class DFA:
             }
             frozen[src] = MappingProxyType(inner)
         object.__setattr__(self, "_edges", MappingProxyType(frozen))
+        
+    def __getitem__(self, key: tuple[str, str]) -> str:
+        if not (isinstance(key, tuple) and len(key) == 2):
+            raise TypeError("DFA indices must be a (state, symbol) tuple")
+        state, symbol = key
+        # Optional: fast sanity checks (kept lightweight since DFA is immutable)
+        if state not in self.Q:
+            raise KeyError(f"Unknown state {state!r}")
+        if symbol not in self.Σ:
+            raise KeyError(f"Symbol {symbol!r} not in alphabet Σ")
+        try:
+            return self.δ[(state, symbol)]
+        except KeyError:
+            raise KeyError(f"No transition defined for ({state!r}, {symbol!r})") from None
 
     @property
     def edges(self) -> Mapping[str, Mapping[str, Tuple[str, ...]]]:
