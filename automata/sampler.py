@@ -13,6 +13,9 @@ class Sampler:
             self.depth = parent.depth + 1 if parent else 1
             
         def get_possible_words(self, dfa: DFA) -> set[str]:
+            if not self.prev:
+                return {""}
+            
             cur_node = self
             rev_path = []
             
