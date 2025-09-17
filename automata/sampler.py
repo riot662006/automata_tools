@@ -32,8 +32,30 @@ class Sampler:
         self._queue.append(Sampler.SampleNode(dfa.q0))
         
         self._samples = set()
+        
+    def path_between_exists(self, state: str, end_states: set[str]) -> bool:
+        def rec(state: str, visited: set[str]) -> bool:
+            if state in visited:
+                return False
+            
+            for ns in self._dfa.edges[state]:
+                if ns in end_states:
+                    return True
+                if rec(ns, visited | {state}):
+                    return True
+                
+            return False
+        
+        return rec(state, set())
             
     def sample(self, *, max_samples = 10, max_depth = 10) -> List[str]:
+        dead_end_states = set()
+        
+        for state in self._dfa.Q:
+            # checks if state can lead to accepting state
+            if not self.path_between_exists(state, self._dfa.F):
+                dead_end_states.add(state)
+        
         while self._queue:
             node = self._queue.popleft()
             
@@ -42,6 +64,9 @@ class Sampler:
                 
             if len(self._samples) >= max_samples:
                 break
+            
+            if node.state in dead_end_states:
+                continue
             
             if node.depth < max_depth:
                 for sym in self._dfa.Σ:
