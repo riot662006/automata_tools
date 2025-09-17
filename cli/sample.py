@@ -2,6 +2,7 @@ import argparse
 
 from automata.parser import parse_dfa_file
 from automata.sampler import Sampler
+from automata.utils import cprint
 
 def main():
     ap = argparse.ArgumentParser(
@@ -17,8 +18,16 @@ def main():
     
     sampler = Sampler(dfa)
     samples = sampler.sample(max_samples=args.max_samples, max_depth=args.max_length)
-
-    print(f"Sampled {len(samples)} strings from the DFA")
+    
+    msg = f"Sampled {len(samples)} strings from the DFA"
+    
+    if len(samples) == args.max_samples:
+        cprint(msg, "green")
+    elif len(samples) == 0:
+        cprint(msg, "red")
+    else:
+        cprint(msg, "yellow")
+        
     if args.out: 
         with open(args.out, "w") as f:
             f.write("\n".join(repr(s) for s in samples))
