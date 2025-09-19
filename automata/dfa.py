@@ -2,25 +2,12 @@ from dataclasses import dataclass, field
 from typing import Mapping, Tuple, Dict, List
 from types import MappingProxyType
 
+from automata.automaton import Automaton
+
 
 @dataclass(frozen=True)
-class DFA:
-    Q: frozenset[str]
-    Σ: frozenset[str]
-    δ: Mapping[tuple[str, str], str]
-    q0: str
-    F: frozenset[str]
-
-    _edges: Mapping[str, Mapping[str, Tuple[str, ...]]
-                    ] = field(init=False, repr=False)
-
-    def __post_init__(self):
-        object.__setattr__(self, "Q", frozenset(self.Q))
-        object.__setattr__(self, "Σ", frozenset(self.Σ))
-        object.__setattr__(self, "F", frozenset(self.F))
-        if not isinstance(self.δ, MappingProxyType):
-            object.__setattr__(self, "δ", MappingProxyType(dict(self.δ)))
-
+class DFA(Automaton):
+    def _generate_edges(self):
         by_src: Dict[str, Dict[str, List[str]]] = {}
         for (src, sym), dst in self.δ.items():
             by_src.setdefault(src, {}).setdefault(dst, []).append(sym)
@@ -33,21 +20,7 @@ class DFA:
             }
             frozen[src] = MappingProxyType(inner)
         object.__setattr__(self, "_edges", MappingProxyType(frozen))
-        
-    def __getitem__(self, key: tuple[str, str]) -> str:
-        if not (isinstance(key, tuple) and len(key) == 2):
-            raise TypeError("DFA indices must be a (state, symbol) tuple")
-        state, symbol = key
-        # Optional: fast sanity checks (kept lightweight since DFA is immutable)
-        if state not in self.Q:
-            raise KeyError(f"Unknown state {state!r}")
-        if symbol not in self.Σ:
-            raise KeyError(f"Symbol {symbol!r} not in alphabet Σ")
-        try:
-            return self.δ[(state, symbol)]
-        except KeyError:
-            raise KeyError(f"No transition defined for ({state!r}, {symbol!r})") from None
-        
+  
     def get_tuples(self) -> Tuple[frozenset[str], frozenset[str], Mapping[Tuple[str, str], str], str, frozenset[str]]:
         return set(self.Q), set(self.Σ), self.δ, self.q0, set(self.F)
 
