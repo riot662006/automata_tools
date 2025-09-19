@@ -42,12 +42,7 @@ def main():
     args = ap.parse_args()
 
     dfa = parse_dfa_file(args.input)
-
-    # Accept either dataclass with get_tuples() or dict-like
-    if hasattr(dfa, "get_tuples"):
-        Q, Σ, δ, q0, F = dfa.get_tuples()
-    else:
-        Q, Σ, δ, q0, F = dfa["Q"], dfa["Σ"], dfa["δ"], dfa["q0"], dfa["F"]
+    Q, Σ, δ, q0, F = dfa.get_tuples()
 
     print("DFA 5-tuple:")
     print(f"  Q  = {Q}")

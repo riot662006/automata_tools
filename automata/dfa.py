@@ -47,6 +47,9 @@ class DFA:
             return self.δ[(state, symbol)]
         except KeyError:
             raise KeyError(f"No transition defined for ({state!r}, {symbol!r})") from None
+        
+    def get_tuples(self) -> Tuple[frozenset[str], frozenset[str], Mapping[Tuple[str, str], str], str, frozenset[str]]:
+        return set(self.Q), set(self.Σ), self.δ, self.q0, set(self.F)
 
     @property
     def edges(self) -> Mapping[str, Mapping[str, Tuple[str, ...]]]:
