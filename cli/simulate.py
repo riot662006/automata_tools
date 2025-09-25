@@ -28,7 +28,7 @@ def main():
         ap.error(
             "No input strings provided (either as arguments or via --strings-file).")
 
-    output_lines = []
+    output_lines: list[str] = []
 
     for word in words:
         msg = f"{word!r} -> "

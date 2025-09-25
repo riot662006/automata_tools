@@ -1,12 +1,9 @@
 import argparse
-from pathlib import Path
 
-from graphviz import Digraph
+from graphviz import Digraph # type: ignore
 from automata.dfa import DFA
 from automata.parser import parse_dfa_file
 
-#!/usr/bin/env python3
-import argparse
 from automata.parser import parse_dfa_file
 
 def print_transition_table(dfa: DFA):
@@ -22,7 +19,7 @@ def print_transition_table(dfa: DFA):
             dst = dfa.δ.get((s, sym), "-")
             widths[i] = max(widths[i], len(dst))
 
-    def fmt_row(row):
+    def fmt_row(row: list[str]) -> str:
         return " | ".join(f"{cell:>{widths[i]}}" for i, cell in enumerate(row))
     
     print("\nTransition Table δ:")
