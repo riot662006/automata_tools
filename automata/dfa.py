@@ -1,14 +1,16 @@
-from dataclasses import dataclass, field
-from typing import Mapping, Tuple, Dict, List
-from types import MappingProxyType
+from dataclasses import dataclass
+from typing import Mapping, Tuple
 
 from automata.automaton import Automaton
 
 
 @dataclass(frozen=True)
-class DFA(Automaton):
+class DFA(Automaton[str, str]):
+    def __post_init__(self):
+        super().__post_init__()
+
     def get_tuples(self) -> Tuple[frozenset[str], frozenset[str], Mapping[Tuple[str, str], str], str, frozenset[str]]:
-        return set(self.Q), set(self.Σ), self.δ, self.q0, set(self.F)
+        return self.Q, self.Σ, self.δ, self.q0, self.F
 
     @property
     def edges(self) -> Mapping[str, Mapping[str, Tuple[str, ...]]]:

@@ -1,22 +1,21 @@
-from dataclasses import dataclass, field
-from typing import Mapping, Tuple, Dict, List
-from types import MappingProxyType
+from dataclasses import dataclass
+from typing import Mapping, Tuple
 
-from automata.automaton import Automaton
+from automata.automaton import Automaton, Symbol
 
 
 @dataclass(frozen=True)
-class NFA(Automaton):
-    def get_tuples(self) -> Tuple[frozenset[str], frozenset[str], Mapping[Tuple[str, str], set[str]], str, frozenset[str]]:
-        return set(self.Q), set(self.Σ), self.δ, self.q0, set(self.F)
+class NFA(Automaton[Symbol, frozenset[str]]):
+    def get_tuples(self) -> Tuple[frozenset[str], frozenset[str], Mapping[Tuple[str, Symbol], frozenset[str]], str, frozenset[str]]:
+        return self.Q, self.Σ, self.δ, self.q0, self.F
 
     @property
-    def edges(self) -> Mapping[str, Mapping[str, Tuple[str, ...]]]:
+    def edges(self) -> Mapping[str, Mapping[str, Tuple[Symbol, ...]]]:
         return self._edges
 
-    def transition(self, state: str, symbol: str) -> set[str]:
+    def transition(self, state: str, symbol: Symbol) -> set[str]:
         raise NotImplementedError()
-    
+
     def words_for_path(self, state_seq: list[str]) -> set[str]:
         raise NotImplementedError()
 
