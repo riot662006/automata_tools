@@ -11,6 +11,9 @@ class _Epsilon:
     def __repr__(self) -> str:
         return "ε"
 
+    def __str__(self):
+        return "ε"
+
 
 Epsilon = _Epsilon()
 
@@ -25,19 +28,23 @@ class Automaton(ABC):
     q0: str
     F: frozenset[str]
 
-    _edges: Mapping[str, Mapping[str, set[Symbol]]
+    _edges: Mapping[str, Mapping[str, Tuple[Symbol, ...]]
                     ] = field(init=False, repr=False)
 
     def _generate_edges(self):
-        by_src: Dict[str, Dict[str, List[str]]] = {}
+        by_src: Dict[str, Dict[str, List[Symbol]]] = {}
         for (src, sym), dst in self.δ.items():
-            by_src.setdefault(src, {}).setdefault(dst, []).append(sym)
+            if isinstance(dst, (set, frozenset)):
+                for d in dst:
+                    by_src.setdefault(src, {}).setdefault(d, []).append(sym)
+            else:
+                by_src.setdefault(src, {}).setdefault(dst, []).append(sym)
 
         # freeze, sort symbols, and wrap read-only
-        frozen: Dict[str, Mapping[str, Tuple[str, ...]]] = {}
+        frozen: Dict[str, Mapping[str, Tuple[Symbol, ...]]] = {}
         for src, dst_map in by_src.items():
-            inner: Dict[str, Tuple[str, ...]] = {
-                dst: tuple(sorted(syms)) for dst, syms in dst_map.items()
+            inner: Dict[str, Tuple[Symbol, ...]] = {
+                dst: tuple(sorted(syms, key=lambda s: (0, s) if isinstance(s, str) else (1, ""))) for dst, syms in dst_map.items()
             }
             frozen[src] = MappingProxyType(inner)
         object.__setattr__(self, "_edges", MappingProxyType(frozen))
@@ -64,7 +71,7 @@ class Automaton(ABC):
         pass
 
     @property
-    def edges(self) -> Mapping[str, Mapping[str, set[str]]]:
+    def edges(self) -> Mapping[str, Mapping[str, Tuple[Symbol, ...]]]:
         return self._edges
 
     @abstractmethod
