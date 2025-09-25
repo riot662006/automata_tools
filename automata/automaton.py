@@ -1,18 +1,21 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any, Dict, List, Mapping, Tuple
 
 
 class _Epsilon:
     """Singleton sentinel for ε-transitions."""
     __slots__ = ()
+
     def __repr__(self) -> str:
         return "ε"
+
 
 Epsilon = _Epsilon()
 
 Symbol = str | _Epsilon
+
 
 @dataclass(frozen=True)
 class Automaton(ABC):
@@ -22,12 +25,22 @@ class Automaton(ABC):
     q0: str
     F: frozenset[str]
 
-    _edges: Mapping[str, Mapping[str, set[str]]
+    _edges: Mapping[str, Mapping[str, set[Symbol]]
                     ] = field(init=False, repr=False)
 
-    @abstractmethod
     def _generate_edges(self):
-        pass
+        by_src: Dict[str, Dict[str, List[str]]] = {}
+        for (src, sym), dst in self.δ.items():
+            by_src.setdefault(src, {}).setdefault(dst, []).append(sym)
+
+        # freeze, sort symbols, and wrap read-only
+        frozen: Dict[str, Mapping[str, Tuple[str, ...]]] = {}
+        for src, dst_map in by_src.items():
+            inner: Dict[str, Tuple[str, ...]] = {
+                dst: tuple(sorted(syms)) for dst, syms in dst_map.items()
+            }
+            frozen[src] = MappingProxyType(inner)
+        object.__setattr__(self, "_edges", MappingProxyType(frozen))
 
     def _freeze_variables(self):
         object.__setattr__(self, "Q", frozenset(self.Q))

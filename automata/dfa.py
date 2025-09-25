@@ -7,20 +7,6 @@ from automata.automaton import Automaton
 
 @dataclass(frozen=True)
 class DFA(Automaton):
-    def _generate_edges(self):
-        by_src: Dict[str, Dict[str, List[str]]] = {}
-        for (src, sym), dst in self.δ.items():
-            by_src.setdefault(src, {}).setdefault(dst, []).append(sym)
-
-        # freeze, sort symbols, and wrap read-only
-        frozen: Dict[str, Mapping[str, Tuple[str, ...]]] = {}
-        for src, dst_map in by_src.items():
-            inner: Dict[str, Tuple[str, ...]] = {
-                dst: tuple(sorted(syms)) for dst, syms in dst_map.items()
-            }
-            frozen[src] = MappingProxyType(inner)
-        object.__setattr__(self, "_edges", MappingProxyType(frozen))
-
     def get_tuples(self) -> Tuple[frozenset[str], frozenset[str], Mapping[Tuple[str, str], str], str, frozenset[str]]:
         return set(self.Q), set(self.Σ), self.δ, self.q0, set(self.F)
 
