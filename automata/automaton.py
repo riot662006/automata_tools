@@ -1,18 +1,24 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Mapping
 
 
-class Epsilon:
-    pass
+class _Epsilon:
+    """Singleton sentinel for ε-transitions."""
+    __slots__ = ()
+    def __repr__(self) -> str:
+        return "ε"
 
+Epsilon = _Epsilon()
+
+Symbol = str | _Epsilon
 
 @dataclass(frozen=True)
-class Automaton:
+class Automaton(ABC):
     Q: frozenset[str]
     Σ: frozenset[str]
-    δ: Mapping[tuple[str, str | Epsilon], Any]
+    δ: Mapping[tuple[str, Symbol], Any]
     q0: str
     F: frozenset[str]
 
@@ -41,7 +47,7 @@ class Automaton:
         self._generate_edges()
 
     @abstractmethod
-    def transition(self, state: str, symbol: str | Epsilon) -> Any:
+    def transition(self, state: str, symbol: Symbol) -> Any:
         pass
 
     @property
@@ -52,7 +58,7 @@ class Automaton:
     def get_tuples(self) -> tuple[frozenset[str], frozenset[str], Mapping[tuple[str, str], Any], str, frozenset[str]]:
         pass
 
-    def transition(self, state: str, symbol: str | Epsilon) -> Any:
+    def transition(self, state: str, symbol: Symbol) -> Any:
         if (state, symbol) not in self.δ:
             raise ValueError(f"No transition defined for ({state}, {symbol})")
         return self.δ[(state, symbol)]
