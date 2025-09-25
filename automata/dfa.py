@@ -20,7 +20,7 @@ class DFA(Automaton):
             }
             frozen[src] = MappingProxyType(inner)
         object.__setattr__(self, "_edges", MappingProxyType(frozen))
-  
+
     def get_tuples(self) -> Tuple[frozenset[str], frozenset[str], Mapping[Tuple[str, str], str], str, frozenset[str]]:
         return set(self.Q), set(self.Σ), self.δ, self.q0, set(self.F)
 
