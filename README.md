@@ -21,7 +21,7 @@ cli/        # Command-line tools
 examples/   # Example automata
   example.dfauto
 
-results/    # Output images (ignored in git)
+results/    # Output images and txts
 ```
 
 ### Installation
@@ -57,6 +57,10 @@ python -m cli.render examples/example.dfauto --fmt svg
 python -m cli.render examples/example.dfauto -o results/mydfa.png # default {name}.png e.g. example.png
 ```
 
+Output:
+
+![Result](results/example.png)
+
 ### Inspect DFA
 
 ```bash
@@ -67,34 +71,32 @@ Output:
 
 ```bash
 DFA 5-tuple:
-  Q  = ['q_1', 'q_2', 'q_3', 'q_4']
-  Σ  = ['0', '1']
-  δ  = {('q_1', '0'): 'q_2', ('q_1', '1'): 'q_4', ('q_2', '0'): 'q_4', ('q_2', '1'): 'q_3', ('q_3', '0'): 'q_4', ('q_3', '1'): 'q_4', ('q_4', '0'): 'q_4', ('q_4', '1'): 'q_1'}
+  Q  = {'q_1', 'q_2'}
+  Σ  = {'1', '0'}
+  δ  = {('q_1', '0'): 'q_1', ('q_1', '1'): 'q_2', ('q_2', '0'): 'q_2', ('q_2', '1'): 'q_1'}
   q0 = q_1
-  F  = {'q_3', 'q_2'}
+  F  = {'q_2'}
 
 Counts:
-  |Q| = 4
+  |Q| = 2
   |Σ| = 2
-  |δ| = 8
-  |F| = 2
+  |δ| = 4
+  |F| = 1
 
 Transition Table δ:
 state |     0 |     1
 ------+-------+------
-  q_1 |   q_2 |   q_4
-  q_2 |   q_4 |   q_3
-  q_3 |   q_4 |   q_4
-  q_4 |   q_4 |   q_1
+  q_1 |   q_1 |   q_2
+  q_2 |   q_2 |   q_1
 ```
 
 ### Simulate Word Input
 
 ```bash
-python  -m cli.simulate examples/example.dfauto 1101 10 2
+python  -m cli.simulate examples/example.dfauto 1101 11 2
 
 # with output file
-python  -m cli.simulate examples/example.dfauto 1101 10 2 --out results/sim_res.txt
+python  -m cli.simulate examples/example.dfauto 1101 11 2 --out results/sim_res.txt
 
 # with input file
 python  -m cli.simulate examples/example.dfauto --in examples/example_words.txt
@@ -104,11 +106,7 @@ Output:
 
 ```bash
 '1101' -> Accepted
-'10' -> Rejected
-'2' -> Error: Symbol '2' not in alphabet Σ = ['0', '1']
-Results written to results/simulation_results.txt # If has output file
-'1101' -> Accepted
-'10' -> Rejected
+'11' -> Rejected
 '2' -> Error: Symbol '2' not in alphabet Σ = ['0', '1']
 Results written to results/simulation_results.txt # If has output file
 ```
