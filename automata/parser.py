@@ -1,3 +1,4 @@
+from typing import Mapping, Tuple
 from automata.dfa import DFA
 from automata.utils import parse_counted_list, Q_LABEL_RE, SIGMA_LABEL_RE
 
@@ -6,15 +7,14 @@ def parse_dfa_file(path: str) -> DFA:
     with open(path, 'r') as f:
         lines = f.readlines()
 
-    Q_num, Q = parse_counted_list(lines[0], Q_LABEL_RE)
-    if not Q:
-        Q = [f"q_{i}" for i in range(1, Q_num + 1)]
+    Q_num, _Q = parse_counted_list(lines[0], Q_LABEL_RE)
+    Q = [f"q_{i}" for i in range(1, Q_num + 1)] if not _Q else _Q
 
     Σ_num, Σ = parse_counted_list(lines[1], SIGMA_LABEL_RE)
     if not Σ:
         Σ = [chr(ord('a') + i) for i in range(Σ_num)]
 
-    δ = {}
+    δ: Mapping[Tuple[str, str], str] = {}
     if len(lines) < 4 + Q_num:
         raise ValueError(
             f"Expected at least {4 + Q_num} lines, got {len(lines)}.")
@@ -39,4 +39,4 @@ def parse_dfa_file(path: str) -> DFA:
     if not F:
         raise ValueError("At least one accept state must be specified.")
 
-    return DFA(Q, Σ, δ, q0, F)
+    return DFA(frozenset(Q), frozenset(Σ), δ, q0, frozenset(F))

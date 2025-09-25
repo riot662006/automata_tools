@@ -43,7 +43,7 @@ Q_LABEL_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 SIGMA_LABEL_RE = re.compile(r"^\w$", re.UNICODE)
 
 
-def parse_counted_list(s: str, label_re):
+def parse_counted_list(s: str, label_re: re.Pattern[str]):
     """
     Parse 'N' or 'N [a, b, c]'.
     Splits items by comma, strips whitespace, and requires each token to FULLY match label_re.
