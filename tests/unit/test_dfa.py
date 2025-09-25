@@ -1,7 +1,9 @@
 import pytest
 
+from automata.dfa import DFA
 
-def test_get_tuples_roundtrip(simple_dfa):
+
+def test_get_tuples_roundtrip(simple_dfa: DFA):
     Q, Σ, δ, q0, F = simple_dfa.get_tuples()
     assert q0 in Q
     assert F.issubset(Q)
@@ -24,28 +26,28 @@ def test_get_tuples_roundtrip(simple_dfa):
         "dfa_multi_accept",
     ]
 )
-def test_edges_grouping(request, dfa_fixture):
-    dfa = request.getfixturevalue(dfa_fixture)
+def test_edges_grouping(request: pytest.FixtureRequest, dfa_fixture: str):
+    dfa: DFA = request.getfixturevalue(dfa_fixture)
     # edges[src][dst] -> tuple(symbols)
-    for src, dst_map in dfa.edges.items():
-        for dst, syms in dst_map.items():
+    for _, dst_map in dfa.edges.items():
+        for _, syms in dst_map.items():
             assert isinstance(syms, tuple)
             assert all(isinstance(x, str) for x in syms)
 
 
-def test_words_for_path_valid(simple_dfa):
+def test_words_for_path_valid(simple_dfa: DFA):
     words = simple_dfa.words_for_path(["q0", "q1"])
     # from the example transitions: δ(q0,a)=q1 and δ(q0,b)=q0 → only 'a' reaches q1
     assert words == {"a"}
 
 
-def test_words_for_path_invalid_edge(simple_dfa):
+def test_words_for_path_invalid_edge(simple_dfa: DFA):
     import pytest
     with pytest.raises(ValueError):
         simple_dfa.words_for_path(["q1", "q0"])  # not in example table
 
 
-def test_accepts(simple_dfa):
+def test_accepts(simple_dfa: DFA):
     assert simple_dfa.accepts("a") is True
     assert simple_dfa.accepts("b") in (True, False)  # depends on your δ
 

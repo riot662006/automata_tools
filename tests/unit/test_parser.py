@@ -1,3 +1,4 @@
+from pathlib import Path
 import pytest
 
 
@@ -86,7 +87,7 @@ import pytest
             1
             """,
             False,
-           id= "more_states_than_declared",
+            id="more_states_than_declared",
         ),
 
         # ---------- Invalid final/accept state index ----------
@@ -177,7 +178,7 @@ import pytest
         ),
     ],
 )
-def test_parse_dfa_file(tmp_path, content, is_valid):
+def test_parse_dfa_file(tmp_path: Path, content: str, is_valid: bool):
     from automata.parser import parse_dfa_file
 
     p = tmp_path / "dfa.dfauto"

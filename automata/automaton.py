@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Dict, Generic, Hashable, List, Mapping, Tuple, TypeVar
+from typing import Any, Dict, Generic, Hashable, List, Mapping, Tuple, TypeVar
 
 
 class _Epsilon:
@@ -17,6 +17,10 @@ class _Epsilon:
 
 Epsilon = _Epsilon()
 Symbol = str | _Epsilon
+
+def sym_sort_key(s: Any) -> tuple[int, str]:
+    # strings first (lexicographically), then ε (or any non-str) after
+    return (0, s) if isinstance(s, str) else (1, "")
 
 SymT = TypeVar("SymT", bound=Hashable)      # symbol type
 DstT = TypeVar("DstT")                      # destination payload type
@@ -48,7 +52,7 @@ class Automaton(Generic[SymT, DstT], ABC):
         frozen: Dict[str, MappingProxyType[str, Tuple[SymT, ...]]] = {}
         for src, dst_map in by_src.items():
             inner: Dict[str, Tuple[SymT, ...]] = {
-                dst: tuple(sorted(syms, key=lambda s: (0, s) if isinstance(s, str) else (1, ""))) for dst, syms in dst_map.items()
+                dst: tuple(sorted(syms, key=sym_sort_key)) for dst, syms in dst_map.items()
             }
             frozen[src] = MappingProxyType(inner)
         object.__setattr__(self, "_edges", MappingProxyType(frozen))
