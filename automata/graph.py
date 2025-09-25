@@ -1,5 +1,6 @@
 from graphviz import Digraph
 
+from automata.automaton import Automaton
 from automata.dfa import DFA
 
 
@@ -12,24 +13,24 @@ def html_label(name: str) -> str:
     return name
 
 
-def build_graph(dfa: DFA, *, engine="dot", rankdir="LR", node_fill="lightgray"):
+def build_graph(auto: Automaton, *, engine="dot", rankdir="LR", node_fill="lightgray"):
     g = Digraph('G', format='png', engine='dot')
     g.attr(rankdir='LR')
     g.attr('node', shape='circle', style='filled',
            fillcolor="lightgray", color='black')
 
-    for n in dfa.Q:
-        shape = "doublecircle" if n in dfa.F else "circle"
+    for n in auto.Q:
+        shape = "doublecircle" if n in auto.F else "circle"
         g.node(n, label=html_label(n), shape=shape)
 
     # Invisible start arrow
     g.node('start', shape='point', width='0.01')
-    g.edge('start', dfa.q0)
+    g.edge('start', auto.q0)
     g.body.append("{ rank=source start }")
 
     # Group multiple symbols on same edge
     grouped = {}
-    for (src, dst_syms) in dfa.edges.items():
+    for (src, dst_syms) in auto.edges.items():
         for dst, syms in dst_syms.items():
             g.edge(src, dst, label=", ".join(syms))
 
