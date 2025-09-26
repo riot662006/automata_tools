@@ -18,9 +18,11 @@ class _Epsilon:
 Epsilon = _Epsilon()
 Symbol = str | _Epsilon
 
+
 def sym_sort_key(s: Any) -> tuple[int, str]:
     # strings first (lexicographically), then ε (or any non-str) after
     return (0, s) if isinstance(s, str) else (1, "")
+
 
 SymT = TypeVar("SymT", bound=Hashable)      # symbol type
 DstT = TypeVar("DstT")                      # destination payload type
@@ -70,7 +72,7 @@ class Automaton(Generic[SymT, DstT], ABC):
         self._generate_edges()
 
     @abstractmethod
-    def transition(self, state: str, symbol: SymT) -> set[str] | str:
+    def transition(self, state: str, symbol: str) -> set[str] | str:
         pass
 
     @property

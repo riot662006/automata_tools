@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from typing import Mapping, Tuple
+from typing import Mapping, Optional, Tuple
 
-from automata.automaton import Automaton, Symbol
+from automata.automaton import Automaton, Epsilon, Symbol
 
 
 @dataclass(frozen=True)
@@ -13,8 +13,27 @@ class NFA(Automaton[Symbol, frozenset[str]]):
     def edges(self) -> Mapping[str, Mapping[str, Tuple[Symbol, ...]]]:
         return self._edges
 
-    def transition(self, state: str, symbol: Symbol) -> set[str]:
-        raise NotImplementedError()
+    def transition(self, state: str, symbol: str) -> set[str]:
+        def epsilon_closure(state: str, visited: Optional[set[str]] = None) -> set[str]:
+            if visited is None:
+                visited = set()
+            if state in visited:
+                return visited
+
+            visited.add(state)
+            for dst, syms in self._edges.get(state, {}).items():
+                if Epsilon in syms:
+                    epsilon_closure(dst, visited)
+            return visited
+
+        next_states: set[str] = set()
+
+        for es in epsilon_closure(state):
+            next_states.update(self.δ.get((es, symbol), set()))
+            for ns in list(self.δ.get((es, symbol), set())):
+                next_states.update(epsilon_closure(ns))
+        
+        return next_states
 
     def words_for_path(self, state_seq: list[str]) -> set[str]:
         raise NotImplementedError()

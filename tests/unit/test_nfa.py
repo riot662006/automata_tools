@@ -182,3 +182,112 @@ def test_identity_of_epsilon_preserved(nfa_mixed_labels: NFA):
     # also make sure we did not stringify ε
     for labels in (e["q0"]["q1"], e["q0"]["q2"]):
         assert "ε" not in labels  # no string 'ε'; only the sentinel instance
+
+def test_transition_uses_pre_epsilon_closure():
+    """
+    q0 -ε-> q1,  (no direct q0-'a' edge)
+    q1 -a-> q2
+    Expect: transition(q0, 'a') includes q2.
+    """
+    Q = {"q0", "q1", "q2"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+        ("q0", Epsilon): {"q1"},
+        ("q1", "a"): {"q2"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q2"})
+
+    got = nfa.transition("q0", "a")
+    assert got == {"q2"}
+
+
+def test_transition_applies_post_epsilon_closure():
+    """
+    q1 -a-> q2, q2 -ε-> qf
+    From q1 on 'a' we reach q2, and post ε-closure adds qf.
+    """
+    Q = {"q1", "q2", "qf"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+        ("q1", "a"): {"q2"},
+        ("q2", Epsilon): {"qf"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q1", F={"qf"})
+
+    got = nfa.transition("q1", "a")
+    assert got == {"q2", "qf"}
+
+
+def test_transition_handles_epsilon_chain_both_sides():
+    """
+    q0 -ε-> q1 -ε-> q2,  q2 -a-> q3,  q3 -ε-> q4
+    transition(q0,'a') should include {q3, q4}.
+    """
+    Q = {"q0", "q1", "q2", "q3", "q4"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+        ("q0", Epsilon): {"q1"},
+        ("q1", Epsilon): {"q2"},
+        ("q2", "a"): {"q3"},
+        ("q3", Epsilon): {"q4"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q4"})
+
+    got = nfa.transition("q0", "a")
+    assert got == {"q3", "q4"}
+
+
+def test_transition_with_epsilon_cycle_no_infinite_loop():
+    """
+    q0 -ε-> q1, q1 -ε-> q0 (cycle), q1 -a-> q2
+    Should still terminate and include q2.
+    """
+    Q = {"q0", "q1", "q2"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+        ("q0", Epsilon): {"q1"},
+        ("q1", Epsilon): {"q0"},
+        ("q1", "a"): {"q2"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q2"})
+
+    got = nfa.transition("q0", "a")
+    assert got == {"q2"}
+
+
+def test_transition_no_move_returns_empty_set():
+    """
+    No edge on given symbol reachable via pre-ε closure.
+    """
+    Q = {"q0", "q1"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+        ("q0", Epsilon): {"q1"},
+        # no ('q1','a') edge
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F=set())
+
+    got = nfa.transition("q0", "a")
+    assert got == set()
+
+
+def test_transition_multiple_targets_and_post_closures():
+    """
+    q0 -ε-> q1
+    q1 -a-> {q2,q3}
+    q2 -ε-> qf
+    q3 -ε-> qf
+    Expect: {q2,q3,qf}
+    """
+    Q = {"q0", "q1", "q2", "q3", "qf"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+        ("q0", Epsilon): {"q1"},
+        ("q1", "a"): {"q2", "q3"},
+        ("q2", Epsilon): {"qf"},
+        ("q3", Epsilon): {"qf"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
+
+    got = nfa.transition("q0", "a")
+    assert got == {"q2", "q3", "qf"}
