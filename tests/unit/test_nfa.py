@@ -6,12 +6,24 @@ from automata.automaton import Epsilon, Symbol, sym_sort_key
 from automata.nfa import NFA
 
 
-def make_nfa(Q: set[str], Σ: set[str], δ: Mapping[Tuple[str, Symbol], set[str]], q0: str, F: set[str]) -> NFA:
+def make_nfa(
+    Q: set[str],
+    Σ: set[str],
+    δ: Mapping[Tuple[str, Symbol], set[str]],
+    q0: str,
+    F: set[str],
+) -> NFA:
     """
     Helper: construct NFA with given components. Your NFA/Automaton __post_init__
     will freeze sets and generate edges as nested MappingProxyType with tuple labels.
     """
-    return NFA(Q=frozenset(Q), Σ=frozenset(Σ), δ={(k[0], k[1]): frozenset(v) for k, v in δ.items()}, q0=q0, F=frozenset(F))
+    return NFA(
+        Q=frozenset(Q),
+        Σ=frozenset(Σ),
+        δ={(k[0], k[1]): frozenset(v) for k, v in δ.items()},
+        q0=q0,
+        F=frozenset(F),
+    )
 
 
 @pytest.fixture
@@ -21,14 +33,14 @@ def nfa_with_epsilon_and_multi() -> NFA:
     # q1 --a|b--> qf
     # q2 --b--> qf and --a--> q2 (loop)
     Q = {"q0", "q1", "q2", "qf"}
-    Σ = {"a", "b"}                      # ε is not in Σ (by convention)
+    Σ = {"a", "b"}  # ε is not in Σ (by convention)
     δ: Mapping[Tuple[str, Symbol], set[str]] = {
         ("q0", Epsilon): {"q1", "q2"},  # ε-split
-        ("q1", "a"): {"qf"},            # single symbol to single dst
+        ("q1", "a"): {"qf"},  # single symbol to single dst
         ("q1", "b"): {"qf"},
         # multi-dest set already handled, but here single
         ("q2", "b"): {"qf"},
-        ("q2", "a"): {"q2"},            # self-loop on 'a'
+        ("q2", "a"): {"q2"},  # self-loop on 'a'
         # also allow ε-loop on q1 (exercise stringification)
         ("q1", Epsilon): {"q1"},
     }
@@ -48,10 +60,8 @@ def nfa_mixed_labels() -> NFA:
         ("q0", "b"): {"q1"},
         ("q0", "a"): {"q1"},
         ("q0", Epsilon): {"q1", "q2"},
-
         ("q0", "c"): {"q2"},
         ("q0", "1"): {"q2"},
-
         ("q1", "a"): {"q1"},
     }
     return make_nfa(Q, Σ, δ, q0="q0", F={"q1"})
@@ -66,7 +76,7 @@ def test_edges_shape_readonly(nfa_with_epsilon_and_multi: NFA):
         assert isinstance(dst_map, Mapping)
         assert isinstance(dst_map, MappingProxyType)
         for _, labels in dst_map.items():
-            assert isinstance(labels, tuple)     # not list/set
+            assert isinstance(labels, tuple)  # not list/set
             # deterministic order
             assert list(labels) == sorted(labels, key=sym_sort_key)
 
@@ -132,8 +142,7 @@ def test_edges_types_and_readonly(nfa_mixed_labels: NFA):
             assert strings == sorted(strings)
             if epsilons:
                 # All ε at the end
-                assert all(not isinstance(s, str)
-                           for s in labels[len(strings):])
+                assert all(not isinstance(s, str) for s in labels[len(strings) :])
 
 
 def test_edge_ordering_per_destination(nfa_mixed_labels: NFA):
@@ -182,6 +191,7 @@ def test_identity_of_epsilon_preserved(nfa_mixed_labels: NFA):
     # also make sure we did not stringify ε
     for labels in (e["q0"]["q1"], e["q0"]["q2"]):
         assert "ε" not in labels  # no string 'ε'; only the sentinel instance
+
 
 def test_transition_uses_pre_epsilon_closure():
     """
@@ -291,3 +301,129 @@ def test_transition_multiple_targets_and_post_closures():
 
     got = nfa.transition("q0", "a")
     assert got == {"q2", "q3", "qf"}
+
+
+def test_accepts_empty_when_start_is_final():
+    """
+    ε is accepted iff q0 ∈ F (or ε-closure(q0) intersects F).
+    Here q0 is already final.
+    """
+    Q = {"q0"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {}
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q0"})
+    assert nfa.accepts("") is True
+
+
+def test_accepts_empty_via_epsilon_closure():
+    """
+    q0 -ε-> qf, qf ∈ F, so ε should be accepted even though q0 ∉ F.
+    """
+    Q = {"q0", "qf"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {("q0", Epsilon): {"qf"}}
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
+    assert nfa.accepts("") is True
+
+
+def test_rejects_empty_when_no_path_to_final():
+    Q = {"q0", "q1"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {}
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q1"})
+    assert nfa.accepts("") is False
+
+
+def test_simple_accept_single_symbol():
+    """
+    q0 -a-> qf, qf ∈ F
+    """
+    Q = {"q0", "qf"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {("q0", "a"): {"qf"}}
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
+    assert nfa.accepts("a") is True
+    assert nfa.accepts("aa") is False  # no second move
+
+
+def test_accepts_uses_pre_epsilon_closure():
+    """
+    q0 -ε-> q1, q1 -a-> qf
+    accept 'a' from q0 by starting on ε-reachable q1.
+    """
+    Q = {"q0", "q1", "qf"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+        ("q0", Epsilon): {"q1"},
+        ("q1", "a"): {"qf"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
+    assert nfa.accepts("a") is True
+
+
+def test_accepts_applies_post_epsilon_closure():
+    """
+    q0 -a-> q1, q1 -ε-> qf
+    After consuming 'a', ε-closure should add qf to current states.
+    """
+    Q = {"q0", "q1", "qf"}
+    Σ = {"a"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+        ("q0", "a"): {"q1"},
+        ("q1", Epsilon): {"qf"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
+    assert nfa.accepts("a") is True
+
+
+def test_accepts_handles_epsilon_cycles():
+    """
+    q0 -ε-> q1, q1 -ε-> q0 (cycle), q1 -b-> qf
+    """
+    Q = {"q0", "q1", "qf"}
+    Σ = {"b"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+        ("q0", Epsilon): {"q1"},
+        ("q1", Epsilon): {"q0"},
+        ("q1", "b"): {"qf"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
+    assert nfa.accepts("b") is True
+
+
+def test_accepts_multiple_paths_nondeterministic_branching():
+    """
+    q0 -a-> q1 and q2; q1 -b-> qf, q2 -b-> qdead
+    Accept if any path ends in F.
+    """
+    Q = {"q0", "q1", "q2", "qf", "qdead"}
+    Σ = {"a", "b"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+        ("q0", "a"): {"q1", "q2"},
+        ("q1", "b"): {"qf"},
+        ("q2", "b"): {"qdead"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
+    assert nfa.accepts("ab") is True  # via q1
+    assert nfa.accepts("aa") is False  # no 'a' out of q1/q2
+
+
+def test_accepts_rejects_when_no_valid_move():
+    """
+    No available move on read symbol from any current state.
+    """
+    Q = {"q0", "q1"}
+    Σ = {"a", "b"}
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {("q0", "a"): {"q1"}}
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q1"})
+    assert nfa.accepts("b") is False  # invalid symbol handled separately
+    assert nfa.accepts("aa") is False  # second 'a' has no edge from q1
+
+
+def test_accepts_raises_on_invalid_symbol():
+    Q = {"q0", "q1"}
+    Σ = {"a"}  # 'b' not in Σ
+    δ: Mapping[Tuple[str, Symbol], set[str]] = {("q0", "a"): {"q1"}}
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q1"})
+    with pytest.raises(ValueError):
+        nfa.accepts("ab")  # 'b' triggers ValueError per your code
