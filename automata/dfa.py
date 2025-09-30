@@ -4,7 +4,7 @@ from typing import Mapping, Tuple
 from automata.automaton import Automaton
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class DFA(Automaton[str, str]):
     def __post_init__(self):
         super().__post_init__()
@@ -16,10 +16,13 @@ class DFA(Automaton[str, str]):
     def edges(self) -> Mapping[str, Mapping[str, Tuple[str, ...]]]:
         return self._edges
 
-    def transition(self, state: str, symbol: str) -> str:
+    def _transition_impl(self, state: str, symbol: str) -> str:
         if (state, symbol) not in self.δ:
             raise ValueError(f"No transition defined for ({state}, {symbol})")
         return self.δ[(state, symbol)]
+    
+    def transition(self, state: str, symbol: str) -> str:
+        return str(super().transition(state, symbol))
 
     def accepts(self, word: str) -> bool:
         state = self.q0

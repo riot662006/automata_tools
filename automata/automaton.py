@@ -36,8 +36,8 @@ class Automaton(Generic[SymT, DstT], ABC):
     q0: str
     F: frozenset[str]
 
-    _edges: Mapping[str, Mapping[str, Tuple[SymT, ...]]
-                    ] = field(init=False, repr=False)
+    _edges: Mapping[str, Mapping[str, Tuple[SymT, ...]]] = field(init=False, repr=False)
+    __hash__ = object.__hash__
 
     def _generate_edges(self):
         by_src: Dict[str, Dict[str, List[SymT]]] = {}
@@ -72,8 +72,15 @@ class Automaton(Generic[SymT, DstT], ABC):
         self._generate_edges()
 
     @abstractmethod
-    def transition(self, state: str, symbol: str) -> set[str] | str:
+    def _transition_impl(self, state: str, symbol: str) -> str | set[str]:
         pass
+
+    @lru_cache(maxsize=None)
+    def _transition_cached(self, state: str, symbol: str) -> str | set[str]:
+        return self._transition_impl(state, symbol)
+
+    def transition(self, state: str, symbol: str) -> str | set[str]:
+        return self._transition_cached(state, symbol)
 
     @property
     def edges(self) -> Mapping[str, Mapping[str, Tuple[SymT, ...]]]:
