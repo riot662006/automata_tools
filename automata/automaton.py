@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from functools import lru_cache
 from types import MappingProxyType
 from typing import Any, Dict, Generic, Hashable, List, Mapping, Tuple, TypeVar
 
 
 class _Epsilon:
     """Singleton sentinel for ε-transitions."""
+
     __slots__ = ()
 
     def __repr__(self) -> str:
@@ -24,11 +26,11 @@ def sym_sort_key(s: Any) -> tuple[int, str]:
     return (0, s) if isinstance(s, str) else (1, "")
 
 
-SymT = TypeVar("SymT", bound=Hashable)      # symbol type
-DstT = TypeVar("DstT")                      # destination payload type
+SymT = TypeVar("SymT", bound=Hashable)  # symbol type
+DstT = TypeVar("DstT")  # destination payload type
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Automaton(Generic[SymT, DstT], ABC):
     Q: frozenset[str]
     Σ: frozenset[str]
@@ -44,17 +46,20 @@ class Automaton(Generic[SymT, DstT], ABC):
         for (src, sym), dst in self.δ.items():
             if isinstance(dst, (set, frozenset)):
                 for d in dst:  # type: ignore[union-attr]
-                    by_src.setdefault(src, {}).setdefault(
-                        d, []).append(sym)  # type: ignore[union-attr]
+                    by_src.setdefault(src, {}).setdefault(d, []).append(  # type: ignore[union-attr]
+                        sym
+                    )
             else:
-                by_src.setdefault(src, {}).setdefault(
-                    dst, []).append(sym)  # type: ignore[union-attr]
+                by_src.setdefault(src, {}).setdefault(dst, []).append(  # type: ignore[union-attr]
+                    sym
+                )
 
         # freeze, sort symbols, and wrap read-only
         frozen: Dict[str, MappingProxyType[str, Tuple[SymT, ...]]] = {}
         for src, dst_map in by_src.items():
             inner: Dict[str, Tuple[SymT, ...]] = {
-                dst: tuple(sorted(syms, key=sym_sort_key)) for dst, syms in dst_map.items()
+                dst: tuple(sorted(syms, key=sym_sort_key))
+                for dst, syms in dst_map.items()
             }
             frozen[src] = MappingProxyType(inner)
         object.__setattr__(self, "_edges", MappingProxyType(frozen))
@@ -87,7 +92,15 @@ class Automaton(Generic[SymT, DstT], ABC):
         return self._edges
 
     @abstractmethod
-    def get_tuples(self) -> Tuple[frozenset[str], frozenset[str], Mapping[Tuple[str, SymT], DstT], str, frozenset[str]]:
+    def get_tuples(
+        self,
+    ) -> Tuple[
+        frozenset[str],
+        frozenset[str],
+        Mapping[Tuple[str, SymT], DstT],
+        str,
+        frozenset[str],
+    ]:
         pass
 
     def words_for_path(self, state_seq: list[str]) -> set[str]:
@@ -113,8 +126,7 @@ class Automaton(Generic[SymT, DstT], ABC):
 
             letters = self.edges[src][dst]
             if not letters:
-                raise ValueError(
-                    f"Transition {src!r} -> {dst!r} has no symbols")
+                raise ValueError(f"Transition {src!r} -> {dst!r} has no symbols")
 
             words = {w + letter for w in words for letter in letters}
 
