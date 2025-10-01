@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Mapping, Optional, Tuple
 
 from automata.automaton import Automaton, Epsilon, Symbol
@@ -20,8 +21,8 @@ class NFA(Automaton[Symbol, frozenset[str]]):
     @property
     def edges(self) -> Mapping[str, Mapping[str, Tuple[Symbol, ...]]]:
         return self._edges
-
-    def _epsilon_closure(
+    
+    def _epsilon_closure_impl(
         self, state: str, visited: Optional[set[str]] = None
     ) -> set[str]:
         if visited is None:
@@ -32,8 +33,12 @@ class NFA(Automaton[Symbol, frozenset[str]]):
         visited.add(state)
         for dst, syms in self._edges.get(state, {}).items():
             if Epsilon in syms:
-                self._epsilon_closure(dst, visited)
+                self._epsilon_closure_impl(dst, visited)
         return visited
+    
+    @lru_cache(maxsize=None)
+    def _epsilon_closure(self, state: str) -> set[str]:
+        return self._epsilon_closure_impl(state)
 
     def _transition_impl(self, state: str, symbol: str) -> set[str]:
         next_states: set[str] = set()
