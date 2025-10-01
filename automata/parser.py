@@ -5,6 +5,15 @@ from automata.nfa import NFA
 from automata.utils import parse_counted_list, Q_LABEL_RE, SIGMA_LABEL_RE
 
 
+def parse_automaton(path: str) -> NFA | DFA:
+    if path.endswith(".dfauto"):
+        return parse_dfa_file(path)
+    elif path.endswith(".nfauto"):
+        return parse_nfa_file(path)
+    else:
+        raise ValueError(f"Expected .dfauto or .nfauto file, got {path}.")
+
+
 def _parse_automaton_data(lines: list[str]) -> Tuple[list[str], int, list[str] | None, list[str], str, set[str]]:
     """Parses common components for both DFA and NFA from lines."""
     if len(lines) < 4:
