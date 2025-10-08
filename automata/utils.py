@@ -88,3 +88,23 @@ def parse_counted_list(s: str, label_re: re.Pattern[str]):
             "Duplicate items found in the list. Items must be unique.")
 
     return count, raw_items
+
+
+def print_table(rows: list[list[str]]):
+    headers, rows = rows[0], rows[1:]
+    sizes = [0] * len(headers)
+
+    n = len(rows)
+    m = len(headers)
+
+    for j in range(m):
+        sizes[j] = max(sizes[j], len(headers[j]))
+
+        for i in range(n):
+            sizes[j] = max(sizes[j], len(rows[i][j]))
+
+    print(" | ".join(f"{h:>{sizes[i]}}" for i, h in enumerate(headers)))
+    print("-+-".join("-" * s for s in sizes))
+
+    for row in rows:
+        print(" | ".join(f"{cell:>{sizes[i]}}" for i, cell in enumerate(row)))

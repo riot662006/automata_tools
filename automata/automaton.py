@@ -76,6 +76,9 @@ class Automaton(Generic[SymT, DstT], ABC):
         self._freeze_variables()
         self._generate_edges()
 
+    def get_automaton_type(self) -> str:
+        return str(self.__class__.__name__)
+
     @abstractmethod
     def _transition_impl(self, state: str, symbol: str) -> str | set[str]:
         pass
@@ -134,4 +137,12 @@ class Automaton(Generic[SymT, DstT], ABC):
 
     @abstractmethod
     def accepts(self, word: str) -> bool:
+        pass
+    
+    @abstractmethod
+    def formatted_transition(self, state: str, symbol: SymT) -> str:
+        pass
+    
+    @abstractmethod
+    def get_transition_table(self) ->list[list[str]]:
         pass

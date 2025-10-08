@@ -21,7 +21,7 @@ class NFA(Automaton[Symbol, frozenset[str]]):
     @property
     def edges(self) -> Mapping[str, Mapping[str, Tuple[Symbol, ...]]]:
         return self._edges
-    
+
     def _epsilon_closure_impl(
         self, state: str, visited: Optional[set[str]] = None
     ) -> set[str]:
@@ -35,7 +35,7 @@ class NFA(Automaton[Symbol, frozenset[str]]):
             if Epsilon in syms:
                 self._epsilon_closure_impl(dst, visited)
         return visited
-    
+
     @lru_cache(maxsize=None)
     def _epsilon_closure(self, state: str) -> set[str]:
         return self._epsilon_closure_impl(state)
@@ -61,10 +61,31 @@ class NFA(Automaton[Symbol, frozenset[str]]):
 
         for sym in word:
             if sym not in self.Σ:
-                raise ValueError(f"Symbol {sym!r} not in alphabet Σ = {self.Σ}")
+                raise ValueError(
+                    f"Symbol {sym!r} not in alphabet Σ = {self.Σ}")
 
             pos_states = {
                 s for prev_state in pos_states for s in self.transition(prev_state, sym)
             }
 
         return len(pos_states & self.F) > 0
+
+    def formatted_transition(self, state: str, symbol: Symbol) -> str:
+        result = self.δ.get((state, symbol))
+        if result:
+            return ",".join(sorted(list(result)))
+        return "-"
+
+    def get_transition_table(self) -> list[list[str]]:
+        Q_sorted = sorted(self.Q)
+        Σ_sorted = sorted(self.Σ)
+
+        rows: list[list[str]] = [['state'] + Σ_sorted + [str(Epsilon)]]
+
+        for state in Q_sorted:
+            row = [state]
+            for sym in Σ_sorted + [Epsilon]:
+                row.append(self.formatted_transition(state, sym))
+            rows.append(row)
+
+        return rows
