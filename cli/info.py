@@ -15,11 +15,16 @@ def main():
     Q, Σ, δ, q0, F = auto.get_tuples()
 
     print(f"{auto.get_automaton_type()} 5-tuple:")
-    print(f"  Q  = {Q}")
-    print(f"  Σ  = {Σ}")
-    print(f"  δ  = {δ}")
+    print(f"  Q  = {set(Q)}")
+    print(f"  Σ  = {set(Σ)}")
+
+    print()
+    print("Transition Table δ:")
+    print_table(auto.get_transition_table())
+    print()
+
     print(f"  q0 = {q0}")
-    print(f"  F  = {F}")
+    print(f"  F  = {set(F)}")
     print()
 
     print("Counts:")
@@ -27,11 +32,6 @@ def main():
     print(f"  |Σ| = {len(Σ)}")
     print(f"  |δ| = {len(δ)}")
     print(f"  |F| = {len(F)}")
-    print()
-
-    print("Transition Table δ:")
-    print_table(auto.get_transition_table())
-
 
 if __name__ == "__main__":
     main()
