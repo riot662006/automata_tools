@@ -3,7 +3,7 @@ __pycache__/
 
 # Results folder except example.png
 results/*
-!results/example.png
+!results/example_*.png
 
 # Ignore the development folder (used by devs to test features)
 dev/
