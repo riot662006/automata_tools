@@ -44,7 +44,7 @@ class Sampler:
             if state in visited:
                 return False
 
-            for ns in self._auto.edges[state]:
+            for ns in self._auto.edges.get(state, {}):
                 if ns in end_states:
                     return True
                 if rec(ns, visited | {state}):
