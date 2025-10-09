@@ -1,4 +1,5 @@
 import re
+from typing import Mapping, Tuple
 
 
 def cprint(message: str, color: str = "reset", *, bold: bool = False, end: str = "\n") -> None:
@@ -108,3 +109,33 @@ def print_table(rows: list[list[str]]):
 
     for row in rows:
         print(" | ".join(f"{cell:>{sizes[i]}}" for i, cell in enumerate(row)))
+
+
+def words_for_path(state_seq: list[str], edges: Mapping[str, Mapping[str, Tuple[str, ...]]]) -> set[str]:
+    """
+    Given a sequence of states [s0, s1, ..., sk],
+    return all strings that label that path.
+
+    Raises:
+        ValueError: if the path is invalid or no transitions exist.
+    """
+    if len(state_seq) < 2:
+        raise ValueError("Path must contain at least two states.")
+
+    words: set[str] = {""}
+    for i in range(1, len(state_seq)):
+        src, dst = state_seq[i - 1], state_seq[i]
+
+        if src not in edges:
+            raise ValueError(f"No outgoing transitions from state {src!r}")
+
+        if dst not in edges[src]:
+            raise ValueError(f"No transition from {src!r} to {dst!r}")
+
+        letters = edges[src][dst]
+        if not letters:
+            raise ValueError(f"Transition {src!r} -> {dst!r} has no symbols")
+
+        words = {w + letter for w in words for letter in letters}
+
+    return words

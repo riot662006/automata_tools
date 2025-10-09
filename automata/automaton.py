@@ -106,35 +106,6 @@ class Automaton(Generic[SymT, DstT], ABC):
     ]:
         pass
 
-    def words_for_path(self, state_seq: list[str]) -> set[str]:
-        """
-        Given a sequence of states [s0, s1, ..., sk],
-        return all strings that label that path.
-
-        Raises:
-            ValueError: if the path is invalid or no transitions exist.
-        """
-        if len(state_seq) < 2:
-            raise ValueError("Path must contain at least two states.")
-
-        words: set[str] = {""}
-        for i in range(1, len(state_seq)):
-            src, dst = state_seq[i - 1], state_seq[i]
-
-            if src not in self.edges:
-                raise ValueError(f"No outgoing transitions from state {src!r}")
-
-            if dst not in self.edges[src]:
-                raise ValueError(f"No transition from {src!r} to {dst!r}")
-
-            letters = self.edges[src][dst]
-            if not letters:
-                raise ValueError(f"Transition {src!r} -> {dst!r} has no symbols")
-
-            words = {w + letter for w in words for letter in letters}
-
-        return words
-
     @abstractmethod
     def accepts(self, word: str) -> bool:
         pass

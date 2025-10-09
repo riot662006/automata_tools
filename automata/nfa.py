@@ -87,9 +87,6 @@ class NFA(Automaton[Symbol, frozenset[str]]):
             frozen[src] = MappingProxyType(inner)
         return MappingProxyType(frozen)
 
-    def words_for_path(self, state_seq: list[str]) -> set[str]:
-        raise NotImplementedError()
-
     def accepts(self, word: str) -> bool:
         pos_states = self.epsilon_closure(self.q0)
 
