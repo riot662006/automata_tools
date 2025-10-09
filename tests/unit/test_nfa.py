@@ -5,11 +5,13 @@ from typing import Mapping, Tuple
 from automata.automaton import Epsilon, Symbol, sym_sort_key
 from automata.nfa import NFA
 
+TransitionType = Mapping[Tuple[str, Symbol], set[str]]
+
 
 def make_nfa(
     Q: set[str],
     Σ: set[str],
-    δ: Mapping[Tuple[str, Symbol], set[str]],
+    δ: TransitionType,
     q0: str,
     F: set[str],
 ) -> NFA:
@@ -34,7 +36,7 @@ def nfa_with_epsilon_and_multi() -> NFA:
     # q2 --b--> qf and --a--> q2 (loop)
     Q = {"q0", "q1", "q2", "qf"}
     Σ = {"a", "b"}  # ε is not in Σ (by convention)
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q0", Epsilon): {"q1", "q2"},  # ε-split
         ("q1", "a"): {"qf"},  # single symbol to single dst
         ("q1", "b"): {"qf"},
@@ -56,7 +58,7 @@ def nfa_mixed_labels() -> NFA:
     """
     Q = {"q0", "q1", "q2"}
     Σ = {"0", "1", "a", "b", "c"}  # ε is not in Σ by convention
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q0", "b"): {"q1"},
         ("q0", "a"): {"q1"},
         ("q0", Epsilon): {"q1", "q2"},
@@ -142,7 +144,8 @@ def test_edges_types_and_readonly(nfa_mixed_labels: NFA):
             assert strings == sorted(strings)
             if epsilons:
                 # All ε at the end
-                assert all(not isinstance(s, str) for s in labels[len(strings) :])
+                assert all(not isinstance(s, str)
+                           for s in labels[len(strings):])
 
 
 def test_edge_ordering_per_destination(nfa_mixed_labels: NFA):
@@ -201,7 +204,7 @@ def test_transition_uses_pre_epsilon_closure():
     """
     Q = {"q0", "q1", "q2"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q0", Epsilon): {"q1"},
         ("q1", "a"): {"q2"},
     }
@@ -218,7 +221,7 @@ def test_transition_applies_post_epsilon_closure():
     """
     Q = {"q1", "q2", "qf"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q1", "a"): {"q2"},
         ("q2", Epsilon): {"qf"},
     }
@@ -235,7 +238,7 @@ def test_transition_handles_epsilon_chain_both_sides():
     """
     Q = {"q0", "q1", "q2", "q3", "q4"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q0", Epsilon): {"q1"},
         ("q1", Epsilon): {"q2"},
         ("q2", "a"): {"q3"},
@@ -254,7 +257,7 @@ def test_transition_with_epsilon_cycle_no_infinite_loop():
     """
     Q = {"q0", "q1", "q2"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q0", Epsilon): {"q1"},
         ("q1", Epsilon): {"q0"},
         ("q1", "a"): {"q2"},
@@ -271,7 +274,7 @@ def test_transition_no_move_returns_empty_set():
     """
     Q = {"q0", "q1"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q0", Epsilon): {"q1"},
         # no ('q1','a') edge
     }
@@ -291,7 +294,7 @@ def test_transition_multiple_targets_and_post_closures():
     """
     Q = {"q0", "q1", "q2", "q3", "qf"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q0", Epsilon): {"q1"},
         ("q1", "a"): {"q2", "q3"},
         ("q2", Epsilon): {"qf"},
@@ -310,7 +313,7 @@ def test_accepts_empty_when_start_is_final():
     """
     Q = {"q0"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {}
+    δ: TransitionType = {}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q0"})
     assert nfa.accepts("") is True
 
@@ -321,7 +324,7 @@ def test_accepts_empty_via_epsilon_closure():
     """
     Q = {"q0", "qf"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {("q0", Epsilon): {"qf"}}
+    δ: TransitionType = {("q0", Epsilon): {"qf"}}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
     assert nfa.accepts("") is True
 
@@ -329,7 +332,7 @@ def test_accepts_empty_via_epsilon_closure():
 def test_rejects_empty_when_no_path_to_final():
     Q = {"q0", "q1"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {}
+    δ: TransitionType = {}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q1"})
     assert nfa.accepts("") is False
 
@@ -340,7 +343,7 @@ def test_simple_accept_single_symbol():
     """
     Q = {"q0", "qf"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {("q0", "a"): {"qf"}}
+    δ: TransitionType = {("q0", "a"): {"qf"}}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
     assert nfa.accepts("a") is True
     assert nfa.accepts("aa") is False  # no second move
@@ -353,7 +356,7 @@ def test_accepts_uses_pre_epsilon_closure():
     """
     Q = {"q0", "q1", "qf"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q0", Epsilon): {"q1"},
         ("q1", "a"): {"qf"},
     }
@@ -368,7 +371,7 @@ def test_accepts_applies_post_epsilon_closure():
     """
     Q = {"q0", "q1", "qf"}
     Σ = {"a"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q0", "a"): {"q1"},
         ("q1", Epsilon): {"qf"},
     }
@@ -382,7 +385,7 @@ def test_accepts_handles_epsilon_cycles():
     """
     Q = {"q0", "q1", "qf"}
     Σ = {"b"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q0", Epsilon): {"q1"},
         ("q1", Epsilon): {"q0"},
         ("q1", "b"): {"qf"},
@@ -398,7 +401,7 @@ def test_accepts_multiple_paths_nondeterministic_branching():
     """
     Q = {"q0", "q1", "q2", "qf", "qdead"}
     Σ = {"a", "b"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {
+    δ: TransitionType = {
         ("q0", "a"): {"q1", "q2"},
         ("q1", "b"): {"qf"},
         ("q2", "b"): {"qdead"},
@@ -414,7 +417,7 @@ def test_accepts_rejects_when_no_valid_move():
     """
     Q = {"q0", "q1"}
     Σ = {"a", "b"}
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {("q0", "a"): {"q1"}}
+    δ: TransitionType = {("q0", "a"): {"q1"}}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q1"})
     assert nfa.accepts("b") is False  # invalid symbol handled separately
     assert nfa.accepts("aa") is False  # second 'a' has no edge from q1
@@ -423,7 +426,146 @@ def test_accepts_rejects_when_no_valid_move():
 def test_accepts_raises_on_invalid_symbol():
     Q = {"q0", "q1"}
     Σ = {"a"}  # 'b' not in Σ
-    δ: Mapping[Tuple[str, Symbol], set[str]] = {("q0", "a"): {"q1"}}
+    δ: TransitionType = {("q0", "a"): {"q1"}}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q1"})
     with pytest.raises(ValueError):
         nfa.accepts("ab")  # 'b' triggers ValueError per your code
+
+
+def assert_ro_map_shape(m: MappingProxyType[str, MappingProxyType[str, Tuple[str, ...]]]):
+    assert isinstance(m, MappingProxyType)
+    for _, inner in m.items():
+        assert isinstance(inner, MappingProxyType)
+        for _, labels in inner.items():
+            assert isinstance(labels, tuple)
+
+
+def test_closed_edges_types_and_caching():
+    """
+    Basic type shape:
+      - top-level MappingProxyType
+      - nested MappingProxyType
+      - labels are tuples (sorted)
+    And cached_property returns the same object on repeated access.
+    """
+    Q = {"q0", "q1", "qf"}
+    Σ = {"a"}
+    δ: TransitionType = {
+        ("q0", Epsilon): {"q1"},
+        ("q1", "a"): {"qf"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
+
+    ce1 = nfa.closed_edges
+    ce2 = nfa.closed_edges
+    assert ce1 is ce2  # cached_property
+
+    assert_ro_map_shape(ce1)
+    # labels are sorted alpha (trivial here)
+    for inner in ce1.values():
+        for labels in inner.values():
+            assert list(labels) == sorted(labels)
+
+
+def test_closed_edges_pre_epsilon_closure():
+    """
+    q0 --ε--> q1, q1 --a--> qf
+    closed_edges must include q0 --a--> qf even though δ has no direct q0-'a'.
+    """
+    Q = {"q0", "q1", "qf"}
+    Σ = {"a"}
+    δ: TransitionType = {
+        ("q0", Epsilon): {"q1"},
+        ("q1", "a"): {"qf"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
+
+    ce = nfa.closed_edges
+    assert "q0" in ce
+    assert "qf" in ce["q0"]
+    assert ce["q0"]["qf"] == ("a",)
+
+
+def test_closed_edges_post_epsilon_closure():
+    """
+    q0 --a--> q1, q1 --ε--> qf
+    closed_edges must include q0 --a--> qf via post-ε closure.
+    """
+    Q = {"q0", "q1", "qf"}
+    Σ = {"a"}
+    δ: TransitionType = {
+        ("q0", "a"): {"q1"},
+        ("q1", Epsilon): {"qf"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
+
+    ce = nfa.closed_edges
+    assert ce["q0"]["qf"] == ("a",)
+
+
+def test_closed_edges_epsilon_chain_and_cycle():
+    """
+    q0 --ε--> q1 --ε--> q2 (chain), q2 --a--> q3, q3 --ε--> q4 (post closure)
+    Also a cycle q1 --ε--> q0 to ensure no infinite loop.
+    Expect q0 --a--> {q3,q4} in closed_edges.
+    """
+    Q = {"q0", "q1", "q2", "q3", "q4"}
+    Σ = {"a"}
+    δ: TransitionType = {
+        ("q0", Epsilon): {"q1"},
+        ("q1", Epsilon): {"q0", "q2"},  # cycle and chain
+        ("q2", "a"): {"q3"},
+        ("q3", Epsilon): {"q4"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q4"})
+
+    ce = nfa.closed_edges
+    assert set(ce["q0"].keys()).issuperset({"q3", "q4"})
+    assert ce["q0"]["q3"] == ("a",)
+    assert ce["q0"]["q4"] == ("a",)
+
+
+def test_closed_edges_groups_multiple_symbols_and_dests():
+    """
+    q0 --ε--> q1
+    q1 --a--> q2, q1 --b--> q2
+    q1 --a--> q3 (branch)
+    Expect q0 --a--> {q2,q3} and q0 --b--> {q2}.
+    Labels per destination are grouped and sorted.
+    """
+    Q = {"q0", "q1", "q2", "q3"}
+    Σ = {"a", "b"}
+    δ: TransitionType = {
+        ("q0", Epsilon): {"q1"},
+        ("q1", "a"): {"q2", "q3"},
+        ("q1", "b"): {"q2"},
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F=set())
+
+    ce = nfa.closed_edges
+    assert set(ce["q0"].keys()) == {"q2", "q3"}
+    # For q2, both 'a' and 'b' reach it; labels should be sorted: ('a','b')
+    assert ce["q0"]["q2"] == ("a", "b")
+    # For q3, only 'a'
+    assert ce["q0"]["q3"] == ("a",)
+
+
+def test_closed_edges_ignores_symbols_with_no_reachable_dests():
+    """
+    If transition(src, sym) returns empty set, no entry is created.
+    """
+    Q = {"q0", "q1"}
+    Σ = {"a", "b"}
+    δ: TransitionType = {
+        ("q0", "a"): {"q1"},
+        # no 'b' transitions anywhere
+    }
+    nfa = make_nfa(Q, Σ, δ, q0="q0", F=set())
+
+    ce = nfa.closed_edges
+    assert "q0" in ce
+    assert "q1" in ce["q0"]
+    assert ce["q0"]["q1"] == ("a",)
+    # no destination under 'b' → no extra entries
+    # (no assertion needed other than absence of spurious keys)
+    assert all("b" not in labels for labels in ce["q0"].values())

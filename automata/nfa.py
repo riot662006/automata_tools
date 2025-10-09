@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from functools import lru_cache
-from typing import Mapping, Optional, Tuple
+from functools import lru_cache, cached_property
+from types import MappingProxyType
+from typing import Dict, List, Mapping, Optional, Tuple
 
 from automata.automaton import Automaton, Epsilon, Symbol
 
@@ -37,27 +38,60 @@ class NFA(Automaton[Symbol, frozenset[str]]):
         return visited
 
     @lru_cache(maxsize=None)
-    def _epsilon_closure(self, state: str) -> set[str]:
+    def epsilon_closure(self, state: str) -> set[str]:
         return self._epsilon_closure_impl(state)
 
     def _transition_impl(self, state: str, symbol: str) -> set[str]:
         next_states: set[str] = set()
 
-        for es in self._epsilon_closure(state):
+        for es in self.epsilon_closure(state):
             next_states.update(self.δ.get((es, symbol), set()))
             for ns in list(self.δ.get((es, symbol), set())):
-                next_states.update(self._epsilon_closure(ns))
+                next_states.update(self.epsilon_closure(ns))
 
         return set(next_states)
 
     def transition(self, state: str, symbol: str) -> set[str]:
         return set(super().transition(state, symbol))
 
+    @cached_property
+    def closed_edges(self) -> MappingProxyType[str, MappingProxyType[str, Tuple[str, ...]]]:
+        """
+        Like _edges, but computed using epsilon-closed transitions:
+        d ∈ ε-closure(move(ε-closure(s), a))
+        Returns:
+            MappingProxyType:
+                {
+                src: MappingProxyType({
+                        dst: (sym1, sym2, ...)
+                    }),
+                ...
+                }
+        """
+        by_src: Dict[str, Dict[str, List[str]]] = {}
+
+        for src in self.Q:
+            for sym in self.Σ:
+                # reuse your transition impl that already does ε before/after
+                dests = self.transition(src, sym)
+                if not dests:
+                    continue
+                dst_map = by_src.setdefault(src, {})
+                for dst in dests:
+                    dst_map.setdefault(dst, []).append(sym)
+
+        # freeze, sort symbols, wrap read-only (same shape as _edges)
+        frozen: Dict[str, MappingProxyType[str, Tuple[str, ...]]] = {}
+        for src, dst_map in by_src.items():
+            inner = {dst: tuple(sorted(syms)) for dst, syms in dst_map.items()}
+            frozen[src] = MappingProxyType(inner)
+        return MappingProxyType(frozen)
+
     def words_for_path(self, state_seq: list[str]) -> set[str]:
         raise NotImplementedError()
 
     def accepts(self, word: str) -> bool:
-        pos_states = self._epsilon_closure(self.q0)
+        pos_states = self.epsilon_closure(self.q0)
 
         for sym in word:
             if sym not in self.Σ:
