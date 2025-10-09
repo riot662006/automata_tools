@@ -1,4 +1,5 @@
 import re
+from typing import Mapping, Tuple
 
 
 def cprint(message: str, color: str = "reset", *, bold: bool = False, end: str = "\n") -> None:
@@ -43,7 +44,7 @@ Q_LABEL_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 SIGMA_LABEL_RE = re.compile(r"^\w$", re.UNICODE)
 
 
-def parse_counted_list(s: str, label_re):
+def parse_counted_list(s: str, label_re: re.Pattern[str]):
     """
     Parse 'N' or 'N [a, b, c]'.
     Splits items by comma, strips whitespace, and requires each token to FULLY match label_re.
@@ -88,3 +89,53 @@ def parse_counted_list(s: str, label_re):
             "Duplicate items found in the list. Items must be unique.")
 
     return count, raw_items
+
+
+def print_table(rows: list[list[str]]):
+    headers, rows = rows[0], rows[1:]
+    sizes = [0] * len(headers)
+
+    n = len(rows)
+    m = len(headers)
+
+    for j in range(m):
+        sizes[j] = max(sizes[j], len(headers[j]))
+
+        for i in range(n):
+            sizes[j] = max(sizes[j], len(rows[i][j]))
+
+    print(" | ".join(f"{h:>{sizes[i]}}" for i, h in enumerate(headers)))
+    print("-+-".join("-" * s for s in sizes))
+
+    for row in rows:
+        print(" | ".join(f"{cell:>{sizes[i]}}" for i, cell in enumerate(row)))
+
+
+def words_for_path(state_seq: list[str], edges: Mapping[str, Mapping[str, Tuple[str, ...]]]) -> set[str]:
+    """
+    Given a sequence of states [s0, s1, ..., sk],
+    return all strings that label that path.
+
+    Raises:
+        ValueError: if the path is invalid or no transitions exist.
+    """
+    if len(state_seq) < 2:
+        raise ValueError("Path must contain at least two states.")
+
+    words: set[str] = {""}
+    for i in range(1, len(state_seq)):
+        src, dst = state_seq[i - 1], state_seq[i]
+
+        if src not in edges:
+            raise ValueError(f"No outgoing transitions from state {src!r}")
+
+        if dst not in edges[src]:
+            raise ValueError(f"No transition from {src!r} to {dst!r}")
+
+        letters = edges[src][dst]
+        if not letters:
+            raise ValueError(f"Transition {src!r} -> {dst!r} has no symbols")
+
+        words = {w + letter for w in words for letter in letters}
+
+    return words

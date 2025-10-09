@@ -1,6 +1,7 @@
-from graphviz import Digraph
+from typing import Any
+from graphviz import Digraph  # type: ignore
 
-from automata.dfa import DFA
+from automata.automaton import Automaton
 
 
 def html_label(name: str) -> str:
@@ -12,25 +13,25 @@ def html_label(name: str) -> str:
     return name
 
 
-def build_graph(dfa: DFA, *, engine="dot", rankdir="LR", node_fill="lightgray"):
-    g = Digraph('G', format='png', engine='dot')
-    g.attr(rankdir='LR')
-    g.attr('node', shape='circle', style='filled',
-           fillcolor="lightgray", color='black')
+def build_graph(auto: Automaton[Any, Any], *, engine: str = "dot", rankdir: str = "LR", node_fill: str = "lightgray"):
+    g = Digraph('G', format='png', engine=engine)
+    g.attr(rankdir=rankdir, )  # type: ignore
+    g.attr('node', shape='circle', style='filled',  # type: ignore
+           fillcolor=node_fill, color='black')
 
-    for n in dfa.Q:
-        shape = "doublecircle" if n in dfa.F else "circle"
-        g.node(n, label=html_label(n), shape=shape)
+    for n in auto.Q:
+        shape = "doublecircle" if n in auto.F else "circle"
+        g.node(n, label=html_label(n), shape=shape)  # type: ignore
 
     # Invisible start arrow
-    g.node('start', shape='point', width='0.01')
-    g.edge('start', dfa.q0)
-    g.body.append("{ rank=source start }")
+    g.node('start', shape='point', width='0.01')  # type: ignore
+    g.edge('start', auto.q0)  # type: ignore
+    g.body.append("{ rank=source start }")  # type: ignore
 
     # Group multiple symbols on same edge
-    grouped = {}
-    for (src, dst_syms) in dfa.edges.items():
+    for (src, dst_syms) in auto.edges.items():
         for dst, syms in dst_syms.items():
-            g.edge(src, dst, label=", ".join(syms))
+            g.edge(src, dst, label=", ".join(  # type: ignore
+                [str(s) for s in syms]))
 
     return g
