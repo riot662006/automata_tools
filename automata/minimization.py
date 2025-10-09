@@ -29,3 +29,9 @@ def find_dead_states(auto: DFA | NFA) -> set[str]:
     rec(auto.q0)
 
     return set(state for state in auto.Q if state not in useful)
+
+
+def minimize(auto: DFA | NFA) -> DFA | NFA:
+    dead_states = find_dead_states(auto)
+
+    return auto.remove_states(dead_states - {auto.q0})
