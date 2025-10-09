@@ -1,5 +1,9 @@
 .venv/
+
+# Cache files
 __pycache__/
+.mypy_cache/
+.pytest_cache/
 
 # Results folder except example.png
 results/*
