@@ -1,4 +1,5 @@
-from automata.minimization import find_dead_states, minimize
+from automata.automaton import Epsilon
+from automata.minimization import find_dead_states, group_indistinguishable_states, minimize
 from tests.conftest import make_dfa, make_nfa
 
 
@@ -76,7 +77,7 @@ def test_nfa_with_epsilon_transitions():
         Q={"p0", "p1", "p2"},
         Σ={"a"},
         δ={
-            ("p0", ""): {"p1"},  # epsilon transition
+            ("p0", Epsilon): {"p1"},  # epsilon transition
             ("p1", "a"): {"p2"},
             ("p2", "a"): {"p2"},
         },
@@ -273,7 +274,7 @@ def test_minimize_nfa_with_epsilon_paths():
         Q={"p0", "p1", "p2"},
         Σ={"a"},
         δ={
-            ("p0", ""): {"p1"},     # ε-transition
+            ("p0", Epsilon): {"p1"},     # ε-transition
             ("p1", "a"): {"p2"},
             ("p2", "a"): {"p2"},
         },
@@ -304,3 +305,134 @@ def test_minimize_multiple_disconnected_components():
     m = minimize(dfa)
     assert m.Q == {"A", "B"}
     assert m.F == {"B"}
+
+# ───────────────────────────────
+# 🔹 Testing Finding Indistinguishable States
+# ───────────────────────────────
+def _as_set_of_fsets(groups: list[set[str]]) -> set[frozenset[str]]:
+    """Helper to make assertions order-agnostic."""
+    return {frozenset(g) for g in groups}
+
+
+# ───────────────────────────────
+# 🔹 1) DFA: two states share identical rows → same group
+# ───────────────────────────────
+def test_group_indistinguishable_states_dfa_row_collapse():
+    dfa = make_dfa(
+        Q={"q0", "q1", "q2"},
+        Σ={"a", "b"},
+        δ={
+            ("q0", "a"): "q1",
+            ("q0", "b"): "q2",
+            ("q1", "a"): "q0",
+            ("q1", "b"): "q0",
+            ("q2", "a"): "q0",
+            ("q2", "b"): "q0",
+        },
+        q0="q0",
+        F={"q0"},
+    )
+    groups = group_indistinguishable_states(dfa)
+    expected = _as_set_of_fsets([{"q0"}, {"q1", "q2"}])
+    assert groups == expected
+
+
+# ───────────────────────────────
+# 🔹 2) DFA: all rows distinct → all singleton groups
+# ───────────────────────────────
+def test_group_indistinguishable_states_dfa_all_distinct():
+    dfa = make_dfa(
+        Q={"s0", "s1", "s2"},
+        Σ={"a"},
+        δ={
+            ("s0", "a"): "s1",
+            ("s1", "a"): "s2",
+            ("s2", "a"): "s2",
+        },
+        q0="s0",
+        F={"s2"},
+    )
+    groups = group_indistinguishable_states(dfa)
+    expected = _as_set_of_fsets([{"s0"}, {"s1"}, {"s2"}])
+    assert groups == expected
+
+
+# ───────────────────────────────
+# 🔹 3) NFA: identical rows incl. ε → same group
+# ───────────────────────────────
+def test_group_indistinguishable_states_nfa_with_epsilon_collapse():
+    nfa = make_nfa(
+        Q={"p0", "p1", "p2"},
+        Σ={"a"},
+        δ={
+            ("p0", Epsilon): {"p1"},          # ε
+            ("p0", "a"): {"p1"},
+            ("p1", Epsilon): {"p0"},          # ε
+            ("p1", "a"): {"p0", "p1"},
+            ("p2", Epsilon): {"p0"},          # ε
+            ("p2", "a"): {"p0", "p1"},   # identical to p1
+        },
+        q0="p0",
+        F={"p0"},
+    )
+    groups = group_indistinguishable_states(nfa)
+    expected = _as_set_of_fsets([{"p0"}, {"p1", "p2"}])
+    assert groups == expected
+
+
+# ───────────────────────────────
+# 🔹 4) NFA: ε differs → separate groups
+# ───────────────────────────────
+def test_group_indistinguishable_states_nfa_epsilon_differs():
+    nfa = make_nfa(
+        Q={"u0", "u1"},
+        Σ={"a"},
+        δ={
+            ("u0", Epsilon): {"u1"},      # ε present here only
+            ("u0", "a"): {"u0"},
+            ("u1", "a"): {"u0"},
+            # ("u1", ""): ∅
+        },
+        q0="u0",
+        F=set(),
+    )
+    groups = group_indistinguishable_states(nfa)
+    expected = _as_set_of_fsets([{"u0"}, {"u1"}])
+    assert groups == expected
+
+
+# ───────────────────────────────
+# 🔹 5) DFA: empty alphabet → all rows identical → one big group
+# ───────────────────────────────
+def test_group_indistinguishable_states_empty_alphabet():
+    dfa = make_dfa(
+        Q={"x", "y", "z"},
+        Σ=set(),
+        δ={},
+        q0="x",
+        F=set(),
+    )
+    groups = group_indistinguishable_states(dfa)
+    expected = _as_set_of_fsets([{"x", "y", "z"}])
+    assert groups == expected
+
+
+# ───────────────────────────────
+# 🔹 6) DFA: two sinks with the SAME targets → same group
+# ───────────────────────────────
+def test_group_indistinguishable_states_two_sinks_same_targets():
+    dfa = make_dfa(
+        Q={"A", "B", "C", "D"},
+        Σ={"a"},
+        δ={
+            ("A", "a"): "B",
+            ("B", "a"): "D",
+            ("C", "a"): "D",   # identical row to B
+            ("D", "a"): "D",
+        },
+        q0="A",
+        F=set(),
+    )
+    groups = group_indistinguishable_states(dfa)
+    expected = _as_set_of_fsets([{"A"}, {"B", "C", "D"}])
+    assert groups == expected
