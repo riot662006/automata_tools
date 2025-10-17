@@ -1,6 +1,6 @@
 
 from typing import Any, Dict, FrozenSet, Set, Tuple
-from automata.automaton import Epsilon
+from automata.automaton import Epsilon, Symbol
 from automata.dfa import DFA
 from automata.nfa import NFA
 
@@ -74,4 +74,60 @@ def group_indistinguishable_states(auto: DFA | NFA) -> Set[FrozenSet[str]]:
 def minimize(auto: DFA | NFA) -> DFA | NFA:
     dead_states = find_dead_states(auto)
 
-    return auto.remove_states(dead_states - {auto.q0})
+    auto_no_dead = auto.remove_states(dead_states - {auto.q0})
+
+    groups = group_indistinguishable_states(auto_no_dead)
+
+    new_Q: set[str] = set()
+    state_map: Dict[str, str] = {}
+
+    for g in groups:
+        if auto_no_dead.q0 in g:
+            retained_state = auto_no_dead.q0
+        else:
+            retained_state = sorted(g)[0]
+
+        for s in g:
+            state_map[s] = retained_state
+
+        new_Q.add(retained_state)
+
+    if isinstance(auto_no_dead, NFA):
+        new_δ_nfa: Dict[Tuple[str, Symbol], frozenset[str]] = {}
+
+        for (src, sym), dsts in auto_no_dead.δ.items():
+            if state_map[src] not in new_Q:
+                continue
+
+            new_dsts = frozenset(state_map[d]
+                                 for d in dsts if state_map[d] in new_Q)
+            if new_dsts:
+                new_δ_nfa[(state_map[src], sym)] = new_dsts
+
+        return NFA(
+            Q=frozenset(new_Q),
+            Σ=auto_no_dead.Σ,
+            δ=new_δ_nfa,
+            q0=auto_no_dead.q0,
+            F=frozenset(state_map[s]
+                        for s in auto_no_dead.F if state_map[s] in new_Q)
+        )
+    else:
+        new_δ_dfa: Dict[Tuple[str, str], str] = {}
+
+        for (src, sym), dst in auto_no_dead.δ.items():
+            if state_map[src] not in new_Q:
+                continue
+            
+            new_δ_dfa[(state_map[src], sym)] = state_map[dst]
+
+        return DFA(
+            Q=frozenset(new_Q),
+            Σ=auto_no_dead.Σ,
+            δ=new_δ_dfa,
+            q0=auto_no_dead.q0,
+            F=frozenset(state_map[s]
+                        for s in auto_no_dead.F if state_map[s] in new_Q)
+        )
+
+    raise RuntimeError("Unreachable")

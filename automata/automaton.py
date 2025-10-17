@@ -119,17 +119,6 @@ class Automaton(Generic[SymT, DstT], ABC):
     def get_transition_table(self) -> list[list[str]]:
         pass
 
-    def remove_states(self, states: set[str]):
-        if self.q0 in states:
-            raise ValueError("Cannot remove the start state.")
-
-        new_δ = {k: v for k, v in self.δ.items(
-        ) if k[0] not in states and v not in states}
-
-        return type(self)(
-            Q=self.Q - states,
-            Σ=self.Σ,
-            δ=new_δ,
-            q0=self.q0,
-            F=self.F - states,
-        )
+    @abstractmethod
+    def remove_states(self, states: set[str]) -> "Automaton[SymT, DstT]":
+        pass
