@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Mapping, Tuple
 
-from automata.automaton import Automaton
+from automata.automaton import Automaton, NFALike
 
 
 @dataclass(frozen=True, eq=False)
@@ -72,3 +72,7 @@ class DFA(Automaton[str, str]):
             q0=self.q0,
             F=self.F - states,
         )
+    
+    @staticmethod
+    def from_nfa(nfa: NFALike) -> "DFA":
+        raise NotImplementedError("Conversion from NFA to DFA is not implemented.")
