@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from functools import lru_cache
 from types import MappingProxyType
-from typing import Any, Dict, FrozenSet, Generic, Hashable, List, Mapping, Protocol, Tuple, TypeVar
+from typing import Any, Dict, Generic, Hashable, List, Mapping, Tuple, TypeVar
 
 
 class _Epsilon:
@@ -122,29 +122,3 @@ class Automaton(Generic[SymT, DstT], ABC):
     @abstractmethod
     def remove_states(self, states: set[str]) -> "Automaton[SymT, DstT]":
         pass
-
-
-class DFALike(Protocol):
-    @property
-    def Q(self) -> FrozenSet[str]: ...
-    @property
-    def Σ(self) -> FrozenSet[str]: ...
-    @property
-    def δ(self) -> Mapping[tuple[str, str], str]: ...
-    @property
-    def q0(self) -> str: ...
-    @property
-    def F(self) -> FrozenSet[str]: ...
-
-
-class NFALike(Protocol):
-    @property
-    def Q(self) -> FrozenSet[str]: ...
-    @property
-    def Σ(self) -> FrozenSet[Symbol]: ...
-    @property
-    def δ(self) -> Mapping[tuple[str, Symbol], FrozenSet[str]]: ...
-    @property
-    def q0(self) -> str: ...
-    @property
-    def F(self) -> FrozenSet[str]: ...

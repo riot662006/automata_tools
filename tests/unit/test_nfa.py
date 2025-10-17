@@ -5,7 +5,7 @@ from typing import Mapping, Tuple
 from automata.automaton import Epsilon, Symbol, sym_sort_key
 from automata.nfa import NFA
 
-from tests.conftest import NFATransition, make_dfa, make_nfa
+from tests.conftest import NFATransition, make_nfa
 
 
 @pytest.fixture
@@ -549,33 +549,3 @@ def test_closed_edges_ignores_symbols_with_no_reachable_dests():
     # no destination under 'b' → no extra entries
     # (no assertion needed other than absence of spurious keys)
     assert all("b" not in labels for labels in ce["q0"].values())
-
-def test_nfa_from_dfa_creates_equivalent_nfa():
-    dfa = make_dfa(
-        Q={"q0", "q1"},
-        Σ={"a", "b"},
-        δ={
-            ("q0", "a"): "q1",
-            ("q0", "b"): "q0",
-            ("q1", "a"): "q0",
-            ("q1", "b"): "q1",
-        },
-        q0="q0",
-        F={"q1"},
-    )
-
-    nfa = NFA.from_dfa(dfa)
-
-    # Structure preserved
-    assert nfa.Q == dfa.Q
-    assert nfa.Σ == dfa.Σ
-    assert nfa.q0 == dfa.q0
-    assert nfa.F == dfa.F
-
-    # Each DFA transition becomes singleton set in NFA
-    for (src, sym), dst in dfa.δ.items():
-        assert (src, sym) in nfa.δ
-        assert nfa.δ[(src, sym)] == frozenset({dst})
-
-    # Verify that no extra transitions exist
-    assert len(nfa.δ) == len(dfa.δ)

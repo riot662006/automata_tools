@@ -3,21 +3,11 @@ from functools import lru_cache, cached_property
 from types import MappingProxyType
 from typing import Dict, List, Mapping, Optional, Tuple
 
-from automata.automaton import Automaton, DFALike, Epsilon, Symbol
+from automata.automaton import Automaton, Epsilon, Symbol
 
 
 @dataclass(frozen=True, eq=False)
 class NFA(Automaton[Symbol, frozenset[str]]):
-    @staticmethod
-    def from_dfa(dfa: DFALike) -> "NFA":
-        return NFA(
-            Q=dfa.Q,
-            Σ=dfa.Σ,
-            δ={(k[0], k[1]): frozenset({v}) for k, v in dfa.δ.items()},
-            q0=dfa.q0,
-            F=dfa.F,
-        )
-
     def get_tuples(
         self,
     ) -> Tuple[
@@ -145,4 +135,3 @@ class NFA(Automaton[Symbol, frozenset[str]]):
             q0=self.q0,
             F=self.F - states,
         )
-    
