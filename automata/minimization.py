@@ -1,5 +1,5 @@
 
-from typing import Any, Dict, FrozenSet, Set, Tuple
+from typing import Any, Dict, FrozenSet, Set, Tuple, overload
 from automata.automaton import Epsilon, Symbol
 from automata.dfa import DFA
 from automata.nfa import NFA
@@ -70,6 +70,11 @@ def group_indistinguishable_states(auto: DFA | NFA) -> Set[FrozenSet[str]]:
     groups.update({frozenset(g) for g in buckets.values()})
     return groups
 
+
+@overload
+def minimize(auto: "DFA") -> "DFA": ...
+@overload
+def minimize(auto: "NFA") -> "NFA": ...
 
 def minimize(auto: DFA | NFA) -> DFA | NFA:
     dead_states = find_dead_states(auto)
