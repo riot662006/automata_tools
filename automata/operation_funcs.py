@@ -38,10 +38,10 @@ def union(nfa1: NFA, nfa2: NFA, should_minimize: bool = True) -> NFA:
         An NFA that accepts the union of the languages of nfa1 and nfa2.
     """
 
-    union_Q = frozenset({f"q_union_start"} | {f"nfa1_{q}" for q in nfa1.Q} | {
+    union_Q = frozenset({f"q_start"} | {f"nfa1_{q}" for q in nfa1.Q} | {
                         f"nfa2_{q}" for q in nfa2.Q})
     union_Σ = nfa1.Σ | nfa2.Σ
-    union_q0 = "q_union_start"
+    union_q0 = "q_start"
     union_F = frozenset({f"nfa1_{q}" for q in nfa1.F} |
                         {f"nfa2_{q}" for q in nfa2.F})
     union_δ: Dict[Tuple[str, Symbol], frozenset[str]] = {}

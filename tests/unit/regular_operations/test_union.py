@@ -37,13 +37,13 @@ def test_union_basic_structure_and_prefixing():
     assert u.Σ == {"a", "b"}
 
     # Start & prefixes exist
-    assert "q_union_start" in u.Q
+    assert "q_start" in u.Q
     assert "nfa1_q0" in u.Q and "nfa1_q1" in u.Q
     assert "nfa2_p0" in u.Q and "nfa2_p1" in u.Q
 
     # ε-edges from union start to both original starts
-    assert ("q_union_start", Epsilon) in u.δ
-    assert u.δ[("q_union_start", Epsilon)] == frozenset({"nfa1_q0", "nfa2_p0"})
+    assert ("q_start", Epsilon) in u.δ
+    assert u.δ[("q_start", Epsilon)] == frozenset({"nfa1_q0", "nfa2_p0"})
 
     # Accepting set mapped with prefixes
     assert u.F == {"nfa1_q1", "nfa2_p1"}
@@ -87,7 +87,7 @@ def test_union_preserves_empty_string_acceptance_via_epsilon():
     assert "nfa1_s" in u.F
 
     # ε-link exists to both starts, enabling ε to reach an accepting state
-    assert u.δ[("q_union_start", Epsilon)] == frozenset({"nfa1_s", "nfa2_t0"})
+    assert u.δ[("q_start", Epsilon)] == frozenset({"nfa1_s", "nfa2_t0"})
 
 
 # ───────────────────────────────
@@ -121,8 +121,8 @@ def test_union_with_empty_language_operand():
     assert u.Σ == {"a", "b"}
 
     # ε-link from union start always points to both prefixed starts
-    assert ("q_union_start", Epsilon) in u.δ
-    assert u.δ[("q_union_start", Epsilon)] == frozenset({"nfa1_x0", "nfa2_y0"})
+    assert ("q_start", Epsilon) in u.δ
+    assert u.δ[("q_start", Epsilon)] == frozenset({"nfa1_x0", "nfa2_y0"})
 
     # Accepting set mirrors the non-empty operand
     assert u.F == {"nfa2_y1"}
@@ -200,8 +200,8 @@ def test_union_trims_dead_operand_when_minimized():
     assert all(not s.startswith("nfa1_") for s in u.Q)
 
     # ε from start should now only target the live side's start
-    assert ("q_union_start", Epsilon) in u.δ
-    assert u.δ[("q_union_start", Epsilon)] == frozenset({"nfa2_y0"})
+    assert ("q_start", Epsilon) in u.δ
+    assert u.δ[("q_start", Epsilon)] == frozenset({"nfa2_y0"})
 
     # Language preserved: the b+ structure is intact
     assert u.F == {"nfa2_y1"}
@@ -219,7 +219,7 @@ def test_union_minimize_both_empty_language_keeps_only_start():
     u = union(nfa1, nfa2)  # minimize=True
 
     # Minimizer preserves q0 but prunes dead components and dead ε-edges
-    assert u.Q == {"q_union_start"}
+    assert u.Q == {"q_start"}
     assert u.F == set()
     assert u.δ == {}
 
@@ -254,8 +254,8 @@ def test_union_trims_dead_operand_minimize_simple():
     assert all(not s.startswith("nfa1_") for s in u.Q)
 
     # ε from union start only points to live start
-    assert ("q_union_start", Epsilon) in u.δ
-    assert u.δ[("q_union_start", Epsilon)] == frozenset({"nfa2_y0"})
+    assert ("q_start", Epsilon) in u.δ
+    assert u.δ[("q_start", Epsilon)] == frozenset({"nfa2_y0"})
 
     # Live side intact
     assert u.F == {"nfa2_y1"}
