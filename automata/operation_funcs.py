@@ -1,4 +1,6 @@
 from typing import Dict, Tuple
+from itertools import chain, combinations
+
 from automata.automaton import Epsilon, Symbol
 from automata.dfa import DFA
 from automata.minimization import minimize
@@ -25,6 +27,53 @@ def convert_dfa_to_nfa(dfa: DFA) -> NFA:
         q0=dfa.q0,
         F=dfa.F
     ))
+
+
+def convert_nfa_to_dfa(nfa: NFA) -> DFA:
+    """Convert an NFA to an equivalent DFA using the subset construction method.
+
+    Args:
+        nfa: The NFA to convert.
+
+    Returns:
+        An equivalent DFA.
+    """
+    nfa_minimized = minimize(nfa)
+
+    # power set of nfa states
+    state_subsets = [frozenset(state_subset) for state_subset in chain.from_iterable(
+        combinations(nfa_minimized.Q, r) for r in range(len(nfa_minimized.Q) + 1))]
+
+    start_states = frozenset(nfa_minimized.epsilon_closure(nfa_minimized.q0))
+    state_map: Dict[frozenset[str], str] = {
+        state: f"q_{i}" for i, state in enumerate([s for s in state_subsets if s != start_states])
+    }
+    state_map[start_states] = "q_start"
+    print("State map:", state_map)
+
+    dfa_delta: Dict[Tuple[str, str], str] = {}
+
+    for state_subset in state_map.keys():
+        for symbol in nfa_minimized.Σ:
+            next_states: set[str] = set()
+            for state in state_subset:
+                next_states.update(nfa_minimized.transition(state, symbol))
+            next_states_frozen = frozenset(next_states)
+            dfa_delta[(state_map[state_subset], symbol)
+                        ] = state_map[next_states_frozen]
+
+    dfa_F = frozenset({state_map[s]
+                      for s in state_map.keys() if s & nfa_minimized.F})
+
+    dfa = DFA(
+        Q=frozenset(state_map.values()),
+        Σ=nfa_minimized.Σ,
+        δ=dfa_delta,
+        q0=state_map[start_states],
+        F=dfa_F
+    )
+
+    return dfa
 
 
 def union(nfa1: NFA, nfa2: NFA, should_minimize: bool = True) -> NFA:
@@ -66,6 +115,7 @@ def union(nfa1: NFA, nfa2: NFA, should_minimize: bool = True) -> NFA:
 
     return minimize(raw_nfa) if should_minimize else raw_nfa
 
+
 def concatenate(nfa1: NFA, nfa2: NFA, should_minimize: bool = True) -> NFA:
     """Create a new NFA that is the concatenation of two NFAs.
 
@@ -106,6 +156,7 @@ def concatenate(nfa1: NFA, nfa2: NFA, should_minimize: bool = True) -> NFA:
     )
 
     return minimize(raw_nfa) if should_minimize else raw_nfa
+
 
 def kleene_star(nfa: NFA, should_minimize: bool = True) -> NFA:
     """Create a new NFA that is the Kleene star of the given NFA.
