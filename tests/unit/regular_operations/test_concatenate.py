@@ -1,5 +1,5 @@
 from automata.automaton import Epsilon
-from automata.operation_funcs import concatenate
+from automata.operations import concatenate
 from tests.conftest import make_nfa
 
 

@@ -1,5 +1,5 @@
 from automata.automaton import Epsilon
-from automata.operation_funcs import kleene_star
+from automata.operations import kleene_star
 from tests.conftest import make_nfa
 
 

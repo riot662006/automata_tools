@@ -3,7 +3,7 @@
 from automata.automaton import Epsilon
 from automata.dfa import DFA
 from automata.nfa import NFA
-from automata.operation_funcs import convert_nfa_to_dfa
+from automata.operations import convert_nfa_to_dfa
 from automata.sampler import Sampler
 from tests.conftest import make_nfa
 
