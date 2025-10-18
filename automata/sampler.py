@@ -74,7 +74,7 @@ class Sampler:
             if node.state in dead_end_states:
                 continue
 
-            if node.depth < max_depth:
+            if node.depth <= max_depth:
                 for sym in self._auto.Σ:
                     if isinstance(self._auto, DFA):
                         next_states = {self._auto.transition(node.state, sym)}
