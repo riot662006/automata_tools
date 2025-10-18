@@ -1,3 +1,7 @@
 graphviz
 pytest
 mypy
+
+# For image processing
+opencv-python
+numpy
