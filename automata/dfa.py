@@ -9,6 +9,12 @@ class DFA(Automaton[str, str]):
     def __post_init__(self):
         super().__post_init__()
 
+        # make sure DFA transition function is total
+        for state in self.Q:
+            for symbol in self.Σ:
+                if (state, symbol) not in self.δ:
+                    raise ValueError(f"Transition function is not total: missing ({state}, {symbol})")
+
     def get_tuples(
         self,
     ) -> Tuple[

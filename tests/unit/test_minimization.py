@@ -94,7 +94,11 @@ def test_unreachable_dead_state():
     dfa = make_dfa(
         Q={"q0", "q1", "q2"},
         Σ={"a"},
-        δ={("q0", "a"): "q1", ("q1", "a"): "q1"},
+        δ={
+            ("q0", "a"): "q1",
+            ("q1", "a"): "q1",
+            ("q2", "a"): "q2",
+        },
         q0="q0",
         F={"q1"},
     )
@@ -156,7 +160,7 @@ def test_unreachable_accepting_state():
     dfa = make_dfa(
         Q={"q0", "q1", "q2"},
         Σ={"a"},
-        δ={("q0", "a"): "q1", ("q1", "a"): "q1"},
+        δ={("q0", "a"): "q1", ("q1", "a"): "q1", ("q2", "a"): "q2", },
         q0="q0",
         F={"q2"},
     )
@@ -312,6 +316,7 @@ def test_minimize_removes_unreachable_dfa_state():
         δ={
             ("q0", "a"): "q1",
             ("q1", "a"): "q1",
+            ("q2", "a"): "q2",
         },
         q0="q0",
         F={"q1"},
@@ -347,38 +352,38 @@ def test_minimize_removes_dead_branch_in_nfa():
 def test_minimize_preserves_q0_even_if_dead():
     dfa = make_dfa(
         Q={"x", "y"},
-        Σ={"a"},
-        δ={
-            ("x", "a"): "y",
-            ("y", "a"): "x",
-        },
+        Σ=set(),
+        δ={},
         q0="x",
         F=set(),
     )
     m = minimize(dfa)
     assert m.Q == {"x"}   # only start state remains
     assert m.F == set()
-
+    assert m.δ == {}      # with Σ empty, totality holds with no transitions
 
 # ───────────────────────────────
 # 🔹 4) Unreachable accepting state is removed
 # ───────────────────────────────
-def test_minimize_unreachable_accepting_removed():
+
+
+def test_minimize_preserves_q0_even_if_dead_with_sink():
     dfa = make_dfa(
-        Q={"q0", "q1", "q2"},
+        Q={"x", "y"},
         Σ={"a"},
-        δ={
-            ("q0", "a"): "q1",
-            ("q1", "a"): "q1",
-            # q2 is isolated and accepting
-        },
-        q0="q0",
-        F={"q2"},
+        δ={("x", "a"): "y", ("y", "a"): "x"},
+        q0="x",
+        F=set(),
     )
     m = minimize(dfa)
-    # After removing dead states (except q0), only q0 should remain
-    assert m.Q == {"q0"}
+    # expect a canonical sink ensuring totality
+    assert "x" in m.Q
+    assert any(s.startswith("q_sink")
+               for s in m.Q)  # or check exact name if you fixed it
+    sink = next(s for s in m.Q if s != "x")
     assert m.F == set()
+    assert m.δ[("x", "a")] == sink
+    assert m.δ[(sink, "a")] == sink
 
 
 # ───────────────────────────────
@@ -445,7 +450,7 @@ def test_minimize_multiple_disconnected_components():
 # ───────────────────────────────
 
 
-def test_minimize_dfa_merges_equivalent_dead_sinks():
+def test_minimize_dfa_merges_equivalent_dead_sinks_with_sink():
     dfa = make_dfa(
         Q={"q0", "qd1", "qd2"},
         Σ={"a", "b"},
@@ -461,10 +466,17 @@ def test_minimize_dfa_merges_equivalent_dead_sinks():
         F=set(),
     )
     m = minimize(dfa)
-    # qd1 and qd2 are removed before checking indistinguishability
-    assert m.Q == {"q0"}
+
+    # q0 plus exactly one sink state remains
+    assert len(m.Q) == 2 and "q0" in m.Q
+    sink = next(s for s in m.Q if s != "q0")
+
     assert m.F == set()
-    assert len(m.δ) == 0  # no transitions remain
+    # q0 must route to sink on all symbols; sink self-loops to stay total
+    assert m.δ[("q0", "a")] == sink
+    assert m.δ[("q0", "b")] == sink
+    assert m.δ[(sink, "a")] == sink
+    assert m.δ[(sink, "b")] == sink
 
 
 # ───────────────────────────────
@@ -563,7 +575,7 @@ def test_minimize_nfa_drops_edges_to_removed_states():
 def test_minimize_dfa_unreachable_accepting_removed_but_q0_kept_if_isolated():
     dfa = make_dfa(
         Q={"q0", "iso"},
-        Σ={"a"},
+        Σ=set(),
         δ={
             # q0 has no outgoing edges; iso is isolated & accepting
         },
