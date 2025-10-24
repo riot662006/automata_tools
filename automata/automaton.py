@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from functools import lru_cache
+from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Dict, Generic, Hashable, List, Mapping, Tuple, TypeVar
 
@@ -124,5 +125,5 @@ class Automaton(Generic[SymT, DstT], ABC):
         pass
 
     @abstractmethod
-    def save(self, out_base: str) -> None:
+    def save(self, out_base: str) -> Path:
         pass

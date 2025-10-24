@@ -137,7 +137,7 @@ class NFA(Automaton[Symbol, frozenset[str]]):
             F=self.F - states,
         )
 
-    def save(self, out_base: str) -> None:
+    def save(self, out_base: str) -> Path:
         sorted_Q = sorted(self.Q)
         sorted_Σ = sorted(self.Σ)
 
@@ -163,3 +163,5 @@ class NFA(Automaton[Symbol, frozenset[str]]):
 
         with open(path_obj, 'w', encoding='utf-8') as f:
             f.write("\n".join(lines))
+
+        return path_obj
