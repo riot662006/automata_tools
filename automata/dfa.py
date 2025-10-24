@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Mapping, Tuple
+from pathlib import Path
+from typing import List, Mapping, Tuple
 
 from automata.automaton import Automaton
 
@@ -13,7 +14,8 @@ class DFA(Automaton[str, str]):
         for state in self.Q:
             for symbol in self.Σ:
                 if (state, symbol) not in self.δ:
-                    raise ValueError(f"Transition function is not total: missing ({state}, {symbol})")
+                    raise ValueError(
+                        f"Transition function is not total: missing ({state}, {symbol})")
 
     def get_tuples(
         self,
@@ -78,3 +80,29 @@ class DFA(Automaton[str, str]):
             q0=self.q0,
             F=self.F - states,
         )
+
+    def save(self, out_base: str) -> None:
+        sorted_Q = sorted(self.Q)
+        sorted_Σ = sorted(self.Σ)
+
+        states = f"{len(self.Q)} [{", ".join(sorted_Q)}]"
+        alphabet = f"{len(self.Σ)} [{', '.join(sorted_Σ)}]"
+        transitions: List[str] = []
+
+        for src in sorted(self.Q):
+            transition_row: List[str] = []
+            for sym in sorted(self.Σ):
+                dst = self.δ.get((src, sym))
+                transition_row.append(str(sorted_Q.index(dst)) if dst else "")
+
+            transitions.append(", ".join(transition_row))
+
+        lines = [states, alphabet] + transitions + [
+            str(sorted_Q.index(self.q0)),
+            f"{', '.join(sorted(str(sorted_Q.index(f)) for f in self.F))}"
+        ]
+
+        path_obj = Path(f"{out_base}.dfauto")
+
+        with open(path_obj, 'w', encoding='utf-8') as f:
+            f.write("\n".join(lines))

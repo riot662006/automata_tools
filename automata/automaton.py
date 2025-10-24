@@ -122,3 +122,7 @@ class Automaton(Generic[SymT, DstT], ABC):
     @abstractmethod
     def remove_states(self, states: set[str]) -> "Automaton[SymT, DstT]":
         pass
+
+    @abstractmethod
+    def save(self, out_base: str) -> None:
+        pass
