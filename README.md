@@ -15,6 +15,7 @@ automata/      # Core library
   FORMAT.md    # Text format specs
 
 cli/           # Command-line tools
+  convert.py   # Convert from one automaton type to another
   info.py      # Show tuples for describing an automaton
   render.py    # Render Automaton diagram as image file
   sample.py    # Generate sample words that automaton accepts
@@ -142,6 +143,26 @@ Results written to results/simulation_results.txt # If has output file
 For reference:
 
 ![For reference](results/example_graph_dfa.png)
+
+
+## Convert from DFA to NFA and vise-versa
+
+```bash
+python -m cli.convert examples/example.nfauto --to dfa
+
+# with output file
+python -m cli.convert examples/example.nfauto --to dfa --out results/example_converted
+```
+
+Output:
+```bash
+Converted to NFA and written to results\example_converted.dfauto and rendered image to results/example_converted.png
+```
+![For reference](results/example_converted.png)
+
+From:
+
+![Example converted from](results/example_graph_nfa.png)
 
 ## License
 
