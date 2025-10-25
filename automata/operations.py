@@ -73,7 +73,7 @@ def convert_nfa_to_dfa(nfa: NFA) -> DFA:
         F=dfa_F
     )
 
-    return dfa
+    return minimize(dfa)
 
 
 def union(nfa1: NFA, nfa2: NFA, should_minimize: bool = True) -> NFA:
