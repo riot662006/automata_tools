@@ -1,6 +1,7 @@
 import argparse
 
 from automata.dfa import DFA
+from automata.graph import build_graph
 from automata.operations import convert_dfa_to_nfa, convert_nfa_to_dfa
 from automata.parser import parse_automaton
 from automata.nfa import NFA
@@ -55,7 +56,11 @@ def main():
         raise ValueError("Output base should not have an extension.")
 
     out_path = converted.save(out_base_path)
-    print(f"✅ Converted to NFA and written to {out_path}")
+    
+    g = build_graph(converted)
+    g.render(out_base_path, format='png', cleanup=True)  # type: ignore
+    
+    print(f"✅ Converted to NFA and written to {out_path} and rendered image to {out_base_path}.png")
 
 
 if __name__ == "__main__":
