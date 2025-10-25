@@ -49,7 +49,6 @@ def convert_nfa_to_dfa(nfa: NFA) -> DFA:
         state: f"q_{i}" for i, state in enumerate([s for s in state_subsets if s != start_states])
     }
     state_map[start_states] = "q_start"
-    print("State map:", state_map)
 
     dfa_delta: Dict[Tuple[str, str], str] = {}
 
