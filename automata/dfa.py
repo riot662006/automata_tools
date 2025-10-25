@@ -85,7 +85,7 @@ class DFA(Automaton[str, str]):
         sorted_Q = sorted(self.Q)
         sorted_Σ = sorted(self.Σ)
 
-        states = f"{len(self.Q)} [{", ".join(sorted_Q)}]"
+        states = f"{len(self.Q)} [{', '.join(sorted_Q)}]"
         alphabet = f"{len(self.Σ)} [{', '.join(sorted_Σ)}]"
         transitions: List[str] = []
 
