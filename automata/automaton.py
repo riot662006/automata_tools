@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from functools import lru_cache
+from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Dict, Generic, Hashable, List, Mapping, Tuple, TypeVar
 
@@ -38,7 +39,8 @@ class Automaton(Generic[SymT, DstT], ABC):
     q0: str
     F: frozenset[str]
 
-    _edges: Mapping[str, Mapping[str, Tuple[SymT, ...]]] = field(init=False, repr=False)
+    _edges: Mapping[str, Mapping[str, Tuple[SymT, ...]]
+                    ] = field(init=False, repr=False)
     __hash__ = object.__hash__
 
     def _generate_edges(self):
@@ -109,11 +111,19 @@ class Automaton(Generic[SymT, DstT], ABC):
     @abstractmethod
     def accepts(self, word: str) -> bool:
         pass
-    
+
     @abstractmethod
     def formatted_transition(self, state: str, symbol: SymT) -> str:
         pass
-    
+
     @abstractmethod
-    def get_transition_table(self) ->list[list[str]]:
+    def get_transition_table(self) -> list[list[str]]:
+        pass
+
+    @abstractmethod
+    def remove_states(self, states: set[str]) -> "Automaton[SymT, DstT]":
+        pass
+
+    @abstractmethod
+    def save(self, out_base: str) -> Path:
         pass

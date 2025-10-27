@@ -1,5 +1,6 @@
 from collections import deque
-from typing import List, Optional
+from typing import Any, List, Optional
+from automata.automaton import Automaton
 from automata.dfa import DFA
 from automata.nfa import NFA
 from automata.utils import words_for_path
@@ -27,7 +28,10 @@ class Sampler:
 
             return words_for_path(rev_path[::-1], auto.edges if isinstance(auto, DFA) else auto.closed_edges)
 
-    def __init__(self, auto: DFA | NFA):
+    def __init__(self, auto: Automaton[Any, Any]):
+        if not isinstance(auto, (DFA, NFA)):
+            raise TypeError("Sampler only supports DFA and NFA types.")
+        
         self._auto = auto
 
         self._queue: deque[Sampler.SampleNode] = deque()
@@ -44,7 +48,7 @@ class Sampler:
             if state in visited:
                 return False
 
-            for ns in self._auto.edges[state]:
+            for ns in self._auto.edges.get(state, {}):
                 if ns in end_states:
                     return True
                 if rec(ns, visited | {state}):
@@ -74,7 +78,7 @@ class Sampler:
             if node.state in dead_end_states:
                 continue
 
-            if node.depth < max_depth:
+            if node.depth <= max_depth:
                 for sym in self._auto.Σ:
                     if isinstance(self._auto, DFA):
                         next_states = {self._auto.transition(node.state, sym)}

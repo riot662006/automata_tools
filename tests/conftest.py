@@ -1,6 +1,52 @@
 from pathlib import Path
+from typing import Mapping, Tuple
 import pytest
+from automata.automaton import Symbol
+from automata.dfa import DFA
+from automata.nfa import NFA
 from automata.parser import parse_dfa_file
+
+DFATransition = Mapping[Tuple[str, str], str]
+NFATransition = Mapping[Tuple[str, Symbol], set[str]]
+
+def make_dfa(
+    Q: set[str],
+    Σ: set[str],
+    δ: DFATransition,
+    q0: str,
+    F: set[str],
+) -> DFA:
+    """
+    Helper: construct DFA with given components. Your DFA/Automaton __post_init__
+    will freeze sets and generate edges as nested MappingProxyType with tuple labels.
+    """
+    return DFA(
+        Q=frozenset(Q),
+        Σ=frozenset(Σ),
+        δ={(k[0], k[1]): v for k, v in δ.items()},
+        q0=q0,
+        F=frozenset(F),
+    )
+
+
+def make_nfa(
+    Q: set[str],
+    Σ: set[str],
+    δ: NFATransition,
+    q0: str,
+    F: set[str],
+) -> NFA:
+    """
+    Helper: construct NFA with given components. Your NFA/Automaton __post_init__
+    will freeze sets and generate edges as nested MappingProxyType with tuple labels.
+    """
+    return NFA(
+        Q=frozenset(Q),
+        Σ=frozenset(Σ),
+        δ={(k[0], k[1]): frozenset(v) for k, v in δ.items()},
+        q0=q0,
+        F=frozenset(F),
+    )
 
 
 def write_dfauto(tmp_path: Path, content: str) -> Path:

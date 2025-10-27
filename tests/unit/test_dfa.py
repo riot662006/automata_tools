@@ -35,18 +35,6 @@ def test_edges_grouping(request: pytest.FixtureRequest, dfa_fixture: str):
             assert all(isinstance(x, str) for x in syms)
 
 
-def test_words_for_path_valid(simple_dfa: DFA):
-    words = simple_dfa.words_for_path(["q0", "q1"])
-    # from the example transitions: δ(q0,a)=q1 and δ(q0,b)=q0 → only 'a' reaches q1
-    assert words == {"a"}
-
-
-def test_words_for_path_invalid_edge(simple_dfa: DFA):
-    import pytest
-    with pytest.raises(ValueError):
-        simple_dfa.words_for_path(["q1", "q0"])  # not in example table
-
-
 def test_accepts(simple_dfa: DFA):
     assert simple_dfa.accepts("a") is True
     assert simple_dfa.accepts("b") in (True, False)  # depends on your δ

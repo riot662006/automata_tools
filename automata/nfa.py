@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from functools import lru_cache, cached_property
+from pathlib import Path
 from types import MappingProxyType
 from typing import Dict, List, Mapping, Optional, Tuple
 
@@ -120,3 +121,47 @@ class NFA(Automaton[Symbol, frozenset[str]]):
             rows.append(row)
 
         return rows
+
+    def remove_states(self, states: set[str]) -> "NFA":
+        if self.q0 in states:
+            raise ValueError("Cannot remove the start state.")
+
+        new_δ = {k: v - states for k, v in self.δ.items(
+        ) if k[0] not in states}
+
+        return type(self)(
+            Q=self.Q - states,
+            Σ=self.Σ,
+            δ=new_δ,
+            q0=self.q0,
+            F=self.F - states,
+        )
+
+    def save(self, out_base: str) -> Path:
+        sorted_Q = sorted(self.Q)
+        sorted_Σ = sorted(self.Σ)
+
+        states = f"{len(self.Q)} [{', '.join(sorted_Q)}]"
+        alphabet = f"{len(self.Σ)} [{', '.join(sorted_Σ)}]"
+        transitions: List[str] = []
+
+        for src in sorted(self.Q):
+            transition_row: List[str] = []
+            for sym in sorted(self.Σ) + [Epsilon]:
+                dst = self.δ.get((src, sym))
+                transition_row.append(" ".join(sorted(str(sorted_Q.index(d))
+                                      for d in dst)) if dst else "")
+
+            transitions.append(", ".join(transition_row))
+
+        lines = [states, alphabet] + transitions + [
+            str(sorted_Q.index(self.q0)),
+            f"{', '.join(sorted(str(sorted_Q.index(f)) for f in self.F))}"
+        ]
+
+        path_obj = Path(f"{out_base}.nfauto")
+
+        with open(path_obj, 'w', encoding='utf-8') as f:
+            f.write("\n".join(lines))
+
+        return path_obj

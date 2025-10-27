@@ -5,27 +5,7 @@ from typing import Mapping, Tuple
 from automata.automaton import Epsilon, Symbol, sym_sort_key
 from automata.nfa import NFA
 
-TransitionType = Mapping[Tuple[str, Symbol], set[str]]
-
-
-def make_nfa(
-    Q: set[str],
-    Σ: set[str],
-    δ: TransitionType,
-    q0: str,
-    F: set[str],
-) -> NFA:
-    """
-    Helper: construct NFA with given components. Your NFA/Automaton __post_init__
-    will freeze sets and generate edges as nested MappingProxyType with tuple labels.
-    """
-    return NFA(
-        Q=frozenset(Q),
-        Σ=frozenset(Σ),
-        δ={(k[0], k[1]): frozenset(v) for k, v in δ.items()},
-        q0=q0,
-        F=frozenset(F),
-    )
+from tests.conftest import NFATransition, make_nfa
 
 
 @pytest.fixture
@@ -36,7 +16,7 @@ def nfa_with_epsilon_and_multi() -> NFA:
     # q2 --b--> qf and --a--> q2 (loop)
     Q = {"q0", "q1", "q2", "qf"}
     Σ = {"a", "b"}  # ε is not in Σ (by convention)
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1", "q2"},  # ε-split
         ("q1", "a"): {"qf"},  # single symbol to single dst
         ("q1", "b"): {"qf"},
@@ -58,7 +38,7 @@ def nfa_mixed_labels() -> NFA:
     """
     Q = {"q0", "q1", "q2"}
     Σ = {"0", "1", "a", "b", "c"}  # ε is not in Σ by convention
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", "b"): {"q1"},
         ("q0", "a"): {"q1"},
         ("q0", Epsilon): {"q1", "q2"},
@@ -204,7 +184,7 @@ def test_transition_uses_pre_epsilon_closure():
     """
     Q = {"q0", "q1", "q2"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1"},
         ("q1", "a"): {"q2"},
     }
@@ -221,7 +201,7 @@ def test_transition_applies_post_epsilon_closure():
     """
     Q = {"q1", "q2", "qf"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q1", "a"): {"q2"},
         ("q2", Epsilon): {"qf"},
     }
@@ -238,7 +218,7 @@ def test_transition_handles_epsilon_chain_both_sides():
     """
     Q = {"q0", "q1", "q2", "q3", "q4"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1"},
         ("q1", Epsilon): {"q2"},
         ("q2", "a"): {"q3"},
@@ -257,7 +237,7 @@ def test_transition_with_epsilon_cycle_no_infinite_loop():
     """
     Q = {"q0", "q1", "q2"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1"},
         ("q1", Epsilon): {"q0"},
         ("q1", "a"): {"q2"},
@@ -274,7 +254,7 @@ def test_transition_no_move_returns_empty_set():
     """
     Q = {"q0", "q1"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1"},
         # no ('q1','a') edge
     }
@@ -294,7 +274,7 @@ def test_transition_multiple_targets_and_post_closures():
     """
     Q = {"q0", "q1", "q2", "q3", "qf"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1"},
         ("q1", "a"): {"q2", "q3"},
         ("q2", Epsilon): {"qf"},
@@ -313,7 +293,7 @@ def test_accepts_empty_when_start_is_final():
     """
     Q = {"q0"}
     Σ = {"a"}
-    δ: TransitionType = {}
+    δ: NFATransition = {}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q0"})
     assert nfa.accepts("") is True
 
@@ -324,7 +304,7 @@ def test_accepts_empty_via_epsilon_closure():
     """
     Q = {"q0", "qf"}
     Σ = {"a"}
-    δ: TransitionType = {("q0", Epsilon): {"qf"}}
+    δ: NFATransition = {("q0", Epsilon): {"qf"}}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
     assert nfa.accepts("") is True
 
@@ -332,7 +312,7 @@ def test_accepts_empty_via_epsilon_closure():
 def test_rejects_empty_when_no_path_to_final():
     Q = {"q0", "q1"}
     Σ = {"a"}
-    δ: TransitionType = {}
+    δ: NFATransition = {}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q1"})
     assert nfa.accepts("") is False
 
@@ -343,7 +323,7 @@ def test_simple_accept_single_symbol():
     """
     Q = {"q0", "qf"}
     Σ = {"a"}
-    δ: TransitionType = {("q0", "a"): {"qf"}}
+    δ: NFATransition = {("q0", "a"): {"qf"}}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"qf"})
     assert nfa.accepts("a") is True
     assert nfa.accepts("aa") is False  # no second move
@@ -356,7 +336,7 @@ def test_accepts_uses_pre_epsilon_closure():
     """
     Q = {"q0", "q1", "qf"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1"},
         ("q1", "a"): {"qf"},
     }
@@ -371,7 +351,7 @@ def test_accepts_applies_post_epsilon_closure():
     """
     Q = {"q0", "q1", "qf"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", "a"): {"q1"},
         ("q1", Epsilon): {"qf"},
     }
@@ -385,7 +365,7 @@ def test_accepts_handles_epsilon_cycles():
     """
     Q = {"q0", "q1", "qf"}
     Σ = {"b"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1"},
         ("q1", Epsilon): {"q0"},
         ("q1", "b"): {"qf"},
@@ -401,7 +381,7 @@ def test_accepts_multiple_paths_nondeterministic_branching():
     """
     Q = {"q0", "q1", "q2", "qf", "qdead"}
     Σ = {"a", "b"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", "a"): {"q1", "q2"},
         ("q1", "b"): {"qf"},
         ("q2", "b"): {"qdead"},
@@ -417,7 +397,7 @@ def test_accepts_rejects_when_no_valid_move():
     """
     Q = {"q0", "q1"}
     Σ = {"a", "b"}
-    δ: TransitionType = {("q0", "a"): {"q1"}}
+    δ: NFATransition = {("q0", "a"): {"q1"}}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q1"})
     assert nfa.accepts("b") is False  # invalid symbol handled separately
     assert nfa.accepts("aa") is False  # second 'a' has no edge from q1
@@ -426,7 +406,7 @@ def test_accepts_rejects_when_no_valid_move():
 def test_accepts_raises_on_invalid_symbol():
     Q = {"q0", "q1"}
     Σ = {"a"}  # 'b' not in Σ
-    δ: TransitionType = {("q0", "a"): {"q1"}}
+    δ: NFATransition = {("q0", "a"): {"q1"}}
     nfa = make_nfa(Q, Σ, δ, q0="q0", F={"q1"})
     with pytest.raises(ValueError):
         nfa.accepts("ab")  # 'b' triggers ValueError per your code
@@ -450,7 +430,7 @@ def test_closed_edges_types_and_caching():
     """
     Q = {"q0", "q1", "qf"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1"},
         ("q1", "a"): {"qf"},
     }
@@ -474,7 +454,7 @@ def test_closed_edges_pre_epsilon_closure():
     """
     Q = {"q0", "q1", "qf"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1"},
         ("q1", "a"): {"qf"},
     }
@@ -493,7 +473,7 @@ def test_closed_edges_post_epsilon_closure():
     """
     Q = {"q0", "q1", "qf"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", "a"): {"q1"},
         ("q1", Epsilon): {"qf"},
     }
@@ -511,7 +491,7 @@ def test_closed_edges_epsilon_chain_and_cycle():
     """
     Q = {"q0", "q1", "q2", "q3", "q4"}
     Σ = {"a"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1"},
         ("q1", Epsilon): {"q0", "q2"},  # cycle and chain
         ("q2", "a"): {"q3"},
@@ -535,7 +515,7 @@ def test_closed_edges_groups_multiple_symbols_and_dests():
     """
     Q = {"q0", "q1", "q2", "q3"}
     Σ = {"a", "b"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", Epsilon): {"q1"},
         ("q1", "a"): {"q2", "q3"},
         ("q1", "b"): {"q2"},
@@ -556,7 +536,7 @@ def test_closed_edges_ignores_symbols_with_no_reachable_dests():
     """
     Q = {"q0", "q1"}
     Σ = {"a", "b"}
-    δ: TransitionType = {
+    δ: NFATransition = {
         ("q0", "a"): {"q1"},
         # no 'b' transitions anywhere
     }

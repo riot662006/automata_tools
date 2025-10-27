@@ -1,17 +1,22 @@
-from typing import Mapping, Tuple
-from automata.automaton import Epsilon, Symbol
+from typing import Any, Callable, Mapping, Tuple, Type
+from automata.automaton import Automaton, Epsilon, Symbol
 from automata.dfa import DFA
 from automata.nfa import NFA
 from automata.utils import parse_counted_list, Q_LABEL_RE, SIGMA_LABEL_RE
 
 
-def parse_automaton(path: str) -> NFA | DFA:
-    if path.endswith(".dfauto"):
-        return parse_dfa_file(path)
-    elif path.endswith(".nfauto"):
-        return parse_nfa_file(path)
-    else:
-        raise ValueError(f"Expected .dfauto or .nfauto file, got {path}.")
+def infer_automaton_class(path: str) -> type[Automaton[Any, Any]]:
+    for ext, (cls, _) in AUTOMATON_PARSERS.items():
+        if path.endswith(ext):
+            return cls
+    raise ValueError(f"Expected one of {list(AUTOMATON_PARSERS)}, got {path}.")
+
+
+def parse_automaton(path: str) -> Automaton[Any, Any]:
+    for ext, (_, parser) in AUTOMATON_PARSERS.items():
+        if path.endswith(ext):
+            return parser(path)
+    raise ValueError(f"Unknown automaton type for {path}.")
 
 
 def _parse_automaton_data(lines: list[str]) -> Tuple[list[str], int, list[str] | None, list[str], str, set[str]]:
@@ -119,3 +124,9 @@ def parse_nfa_file(path: str) -> NFA:
             δ[(Q[src], Epsilon)] = frozenset(dsts)
 
     return NFA(frozenset(Q), frozenset(Σ), δ, q0, frozenset(F))
+
+
+AUTOMATON_PARSERS: dict[str, tuple[Type[Automaton[Any, Any]], Callable[[str], Automaton[Any, Any]]]] = {
+    ".dfauto": (DFA, parse_dfa_file),
+    ".nfauto": (NFA, parse_nfa_file),
+}
