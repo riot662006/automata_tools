@@ -99,9 +99,9 @@ class DFAV2:
         self._editing = False
 
         with self.edit():
-            self._add_states(Q)
-            self._add_letters(Σ)
-            self._add_transitions(δ)
+            self.add_states(Q)
+            self.add_letters(Σ)
+            self.add_transitions(δ)
 
         # Lookups after construction
         self.start_sid = self._sid_of(q0)
@@ -116,10 +116,10 @@ class DFAV2:
         c = char.char if isinstance(char, Letter) else char
         return self.char_to_aid[c]
 
-    def _get_state(self, name: str) -> State:
+    def get_state(self, name: str) -> State:
         return self.states[self._sid_of(name)]
 
-    def _get_letter(self, char: str) -> Letter:
+    def get_letter(self, char: str) -> Letter:
         return self.alphabet[self.char_to_aid[char]]
 
     # --- automaton properties ----
@@ -145,7 +145,7 @@ class DFAV2:
         return {state.name for state in (self.states[state_id] for state_id in self.final_sids) if not state.is_dead()}
 
     # --- mutators (guarded by edit) ---
-    def _add_states(self, states: Iterable[str]) -> None:
+    def add_states(self, states: Iterable[str]) -> None:
         if not self._editing:
             raise RuntimeError("Cannot add states outside of edit context.")
         for name in states:
@@ -154,10 +154,10 @@ class DFAV2:
                 self.name_to_sid[name] = len(self.states)
                 self.states.append(state)
             else:
-                state = self._get_state(name)
+                state = self.get_state(name)
             state.ensure_alive()
 
-    def _add_letters(self, letters: Iterable[str]) -> None:
+    def add_letters(self, letters: Iterable[str]) -> None:
         if not self._editing:
             raise RuntimeError("Cannot add letters outside of edit context.")
         for char in letters:
@@ -166,7 +166,7 @@ class DFAV2:
                 self.char_to_aid[char] = len(self.alphabet)
                 self.alphabet.append(letter)
 
-    def _add_transitions(self, transitions: Mapping[Tuple[str, str], str]) -> None:
+    def add_transitions(self, transitions: Mapping[Tuple[str, str], str]) -> None:
         if not self._editing:
             raise RuntimeError(
                 "Cannot add transitions outside of edit context.")

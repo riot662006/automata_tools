@@ -88,19 +88,19 @@ def test_construct_valid_dfa(built_simple_dfa: DFAV2):
 def test_edit_required_for_mutations(built_simple_dfa: DFAV2):
     dfa = built_simple_dfa
     with pytest.raises(RuntimeError):
-        dfa._add_states({"X"})  # type: ignore
+        dfa.add_states({"X"})
     with pytest.raises(RuntimeError):
-        dfa._add_letters({"c"})  # type: ignore
+        dfa.add_letters({"c"})
     with pytest.raises(RuntimeError):
-        # type: ignore # would replace, but outside edit
-        dfa._add_transitions({("S", "a"): "S"})  # type: ignore
+        # would replace, but outside edit
+        dfa.add_transitions({("S", "a"): "S"})
 
 
 def test_add_state_and_letter_then_transition_inside_edit(built_simple_dfa: DFAV2):
     dfa = built_simple_dfa
     with dfa.edit():
-        dfa._add_states({"Z"})  # type: ignore
-        dfa._add_letters({"c"})  # type: ignore
+        dfa.add_states({"Z"})
+        dfa.add_letters({"c"})
         # Make it total by wiring Z on all symbols including new 'c'
         # For existing states, we must also add transitions for 'c'
         for s in ("S", "A", "Z"):
@@ -109,13 +109,13 @@ def test_add_state_and_letter_then_transition_inside_edit(built_simple_dfa: DFAV
                 dst = "S" if sym == "c" else (
                     "A" if (s, sym) in {("S", "a"), ("A", "a")} else "S"
                 )
-                dfa._add_transitions({(s, sym): dst})  # type: ignore
+                dfa.add_transitions({(s, sym): dst})
 
     assert dfa.is_valid_dfa()
     # New letter 'c' must appear in alphabet
     assert "c" in dfa.char_to_aid
     # New state 'Z' must be alive
-    assert not dfa._get_state("Z").is_dead()  # type: ignore
+    assert not dfa.get_state("Z").is_dead()
 
 
 def test_invalid_when_missing_transition(simple_dfa_spec: DFA_Params):
@@ -199,7 +199,7 @@ def test_properties_after_killing_nonfinal_state(simple_dfa_spec: DFA_Params):
     dfa2 = DFAV2(Q2, Sigma2, delta2, q02, F2)
 
     # Mark A as dead (no edit() required; kill only flips metadata)
-    dfa2._get_state("A").kill()  # type: ignore
+    dfa2.get_state("A").kill()
 
     # Q excludes the dead state
     assert dfa2.Q == {"S"}
@@ -223,7 +223,7 @@ def test_properties_after_killing_final_state(built_simple_dfa: DFAV2):
     dfa = built_simple_dfa
 
     # Kill A (which is final in the base fixture)
-    dfa._get_state("A").kill()  # type: ignore
+    dfa.get_state("A").kill()
 
     # Q now excludes A
     assert dfa.Q == {"S"}
@@ -242,7 +242,7 @@ def test_properties_after_killing_final_state(built_simple_dfa: DFAV2):
 def test_q0_name_even_if_start_state_is_killed(built_simple_dfa: DFAV2):
     dfa = built_simple_dfa
     # Kill the start state "S"
-    dfa._get_state("S").kill()  # type: ignore
+    dfa.get_state("S").kill()
 
     # q0 still reports the original start state's *name*
     assert dfa.q0 == "S"
@@ -266,7 +266,7 @@ def test_q0_name_even_if_start_state_is_killed(built_simple_dfa: DFAV2):
 )
 def test_Q_and_F_type_and_semantics_under_kill(built_simple_dfa: DFAV2, kill_state: str, expected_Q: set[str], expected_F: set[str]):
     dfa = built_simple_dfa
-    dfa._get_state(kill_state).kill()  # type: ignore
+    dfa.get_state(kill_state).kill()
 
     # Types
     assert isinstance(dfa.Q, set)
