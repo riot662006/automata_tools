@@ -8,7 +8,7 @@ class State:
     name: str
     meta: dict[str, Any] = field(default_factory=dict)  # type: ignore
 
-    def kill(self) -> None:
+    def _kill(self) -> None:
         self.meta["dead"] = True
 
     def ensure_alive(self) -> None:

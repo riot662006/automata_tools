@@ -199,7 +199,7 @@ def test_properties_after_killing_nonfinal_state(simple_dfa_spec: DFA_Params):
     dfa2 = DFAV2(Q2, Sigma2, delta2, q02, F2)
 
     # Mark A as dead (no edit() required; kill only flips metadata)
-    dfa2.get_state("A").kill()
+    dfa2.get_state("A")._kill() # type: ignore
 
     # Q excludes the dead state
     assert dfa2.Q == {"S"}
@@ -223,7 +223,7 @@ def test_properties_after_killing_final_state(built_simple_dfa: DFAV2):
     dfa = built_simple_dfa
 
     # Kill A (which is final in the base fixture)
-    dfa.get_state("A").kill()
+    dfa.get_state("A")._kill() # type: ignore
 
     # Q now excludes A
     assert dfa.Q == {"S"}
@@ -242,7 +242,7 @@ def test_properties_after_killing_final_state(built_simple_dfa: DFAV2):
 def test_q0_name_even_if_start_state_is_killed(built_simple_dfa: DFAV2):
     dfa = built_simple_dfa
     # Kill the start state "S"
-    dfa.get_state("S").kill()
+    dfa.get_state("S")._kill() # type: ignore
 
     # q0 still reports the original start state's *name*
     assert dfa.q0 == "S"
@@ -266,7 +266,7 @@ def test_q0_name_even_if_start_state_is_killed(built_simple_dfa: DFAV2):
 )
 def test_Q_and_F_type_and_semantics_under_kill(built_simple_dfa: DFAV2, kill_state: str, expected_Q: set[str], expected_F: set[str]):
     dfa = built_simple_dfa
-    dfa.get_state(kill_state).kill()
+    dfa.get_state(kill_state)._kill() # type: ignore
 
     # Types
     assert isinstance(dfa.Q, set)
