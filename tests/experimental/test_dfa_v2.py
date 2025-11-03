@@ -550,3 +550,140 @@ def test_index_lazy_views_build_and_refresh():
     assert idx.out == {}
     assert idx.inn == {}
     assert idx.edges == {}
+
+# ---------------------------------------------------------------------
+# transition() [ID-based] and accepts()
+# ---------------------------------------------------------------------
+
+def test_transition_live_ids_basic(simple_dfa_spec: DFA_Params):
+    Q, Sigma, delta, q0, F = simple_dfa_spec
+    dfa = DFAV2(Q, Sigma, delta, q0, F)
+    sid_S, sid_A = dfa._sid_of("S"), dfa._sid_of("A")  # type: ignore
+    aid_a, aid_b = dfa._aid_of("a"), dfa._aid_of("b")  # type: ignore
+
+    # S --a--> {A}, S --b--> {S}
+    assert dfa.transition(sid_S, aid_a) == {sid_A}
+    assert dfa.transition(sid_S, aid_b) == {sid_S}
+
+    # A --b--> {S}
+    assert dfa.transition(sid_A, aid_b) == {sid_S}
+
+
+def test_transition_throws_on_dead_state_or_letter_when_flag_true(simple_dfa_spec: DFA_Params):
+    Q, Sigma, delta, q0, F = simple_dfa_spec
+    dfa = DFAV2(Q, Sigma, delta, q0, F)
+    sid_S, sid_A = dfa._sid_of("S"), dfa._sid_of("A")  # type: ignore
+    aid_a = dfa._aid_of("a")  # type: ignore
+
+    # Kill A inside edit; call transition on A (dead) should raise if throw_on_dead=True
+    with pytest.raises(ValueError):
+        with dfa.edit():
+            dfa.remove_states(["A"])
+            _ = dfa.transition(sid_A, aid_a, throw_on_dead=True)
+
+    # Kill letter 'a'; calling transition with that letter should raise if throw_on_dead=True
+    with pytest.raises(ValueError):
+        with dfa.edit():
+            dfa.remove_letters(["a"])  # type: ignore[attr-defined]
+            _ = dfa.transition(sid_S, aid_a, throw_on_dead=True)
+
+
+def test_transition_no_throw_on_dead_letter_returns_filtered_dsts(simple_dfa_spec: DFA_Params):
+    """
+    With throw_on_dead=False, a dead LETTER should not raise. The function
+    still returns live destinations (filtering dead states only).
+    """
+    Q, Sigma, delta, q0, F = simple_dfa_spec
+    dfa = DFAV2(Q, Sigma, delta, q0, F)
+    sid_S, sid_A = dfa._sid_of("S"), dfa._sid_of("A")  # type: ignore
+    aid_a = dfa._aid_of("a")  # type: ignore
+
+    with dfa.edit():
+        dfa.remove_letters(["a"])  # type: ignore[attr-defined]
+        # Do not throw; since A is alive, you'll still see {A}
+        assert dfa.transition(sid_S, aid_a, throw_on_dead=False) == {sid_A}
+
+
+def test_transition_filters_dead_destinations(simple_dfa_spec: DFA_Params):
+    """
+    Dead destinations are filtered out of the returned set.
+    """
+    Q, Sigma, delta, q0, F = simple_dfa_spec
+    dfa = DFAV2(Q, Sigma, delta, q0, F)
+    sid_S = dfa._sid_of("S")  # type: ignore
+    aid_a = dfa._aid_of("a")  # type: ignore
+
+    with pytest.raises(ValueError):
+        with dfa.edit():
+            dfa.remove_states(["A"])
+            # raw edge S --a--> A exists in _tx, but A is dead; transition returns empty
+            assert dfa.transition(sid_S, aid_a, throw_on_dead=False) == set()
+            # edit() exit is invalid (S has no live dst on 'a'), so we expect ValueError
+
+
+def test_accepts_basic_language(simple_dfa_spec: DFA_Params):
+    # DFA recognizes strings ending with 'a'
+    Q, Sigma, delta, q0, F = simple_dfa_spec
+    dfa = DFAV2(Q, Sigma, delta, q0, F)
+
+    # Accept
+    assert dfa.accepts("a")
+    assert dfa.accepts("ba")
+    assert dfa.accepts("bba")
+    assert dfa.accepts("abba")
+
+    # Reject
+    assert not dfa.accepts("")
+    assert not dfa.accepts("b")
+    assert not dfa.accepts("abb")
+
+
+def test_accepts_raises_on_unknown_symbol(built_simple_dfa: DFAV2):
+    dfa = built_simple_dfa
+    with pytest.raises(ValueError):
+        dfa.accepts("ac")  # 'c' not in live Σ
+
+
+def test_accepts_respects_dead_letter(built_simple_dfa: DFAV2):
+    dfa = built_simple_dfa
+    with dfa.edit():
+        dfa.remove_letters(["a"])  # type: ignore[attr-defined]
+    # Now 'a' is not in Σ, so using it should raise
+    with pytest.raises(ValueError):
+        dfa.accepts("a")
+
+
+def test_accepts_after_kill_and_rewire(simple_dfa_spec: DFA_Params):
+    """
+    Kill A, add sink Z, rewire missing edges to keep DFA valid, then
+    evaluate acceptance with the new language.
+    """
+    Q, Sigma, delta, q0, F = simple_dfa_spec
+    dfa = DFAV2(Q, Sigma, delta, q0, F)
+
+    with dfa.edit():
+        # Kill A
+        dfa.remove_states(["A"])
+        # Add sink Z and wire to itself on all letters
+        dfa.add_states({"Z"})
+        for sym in Sigma:
+            dfa.add_transitions({("Z", sym): "Z"})
+        # Fill missing live edges by pointing to Z
+        for s_name in dfa.Q:
+            for sym in dfa.Σ:
+                sid = dfa._sid_of(s_name)  # type: ignore
+                aid = dfa._aid_of(sym)     # type: ignore
+                live = {
+                    d for d in dfa._tx.delta.get((sid, aid), set())  # type: ignore
+                    if not dfa.states[d].is_dead()
+                }
+                if not live:
+                    dfa.add_transitions({(s_name, sym): "Z"})
+
+    assert dfa.is_valid_dfa()
+
+    # Language changed (no final A). Our wiring sends 'a' from S to Z (non-final),
+    # so strings ending in 'a' now reject.
+    assert not dfa.accepts("a")
+    assert not dfa.accepts("ba")
+    assert not dfa.accepts("bbb")

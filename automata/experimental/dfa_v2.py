@@ -313,6 +313,43 @@ class DFAV2:
                     return False
         return True
 
+    def transition(self, s_id: int, a_id: int, throw_on_dead: bool = True) -> set[int]:
+        state = self.states[s_id]
+        symbol = self.alphabet[a_id]
+
+        if throw_on_dead and state.is_dead():
+            raise ValueError(f"State {state.name!r} not in Q = {self.Q}")
+        if throw_on_dead and symbol.is_dead():
+            raise ValueError(f"Symbol {symbol.char!r} not in Σ = {self.Σ}")
+
+        dst_ids = self._tx.delta.get((s_id, a_id), set())
+
+        return {
+            did
+            for did in dst_ids
+            if not self.states[did].is_dead()
+        }
+
+    def accepts(self, word: str) -> bool:
+        states = {self.start_sid}
+
+        for sym in word:
+            if sym not in self.Σ:
+                raise ValueError(
+                    f"Symbol {sym!r} not in alphabet Σ = {self.Σ}")
+
+            new_states: set[int] = set()
+
+            for state in states:
+                new_states |= self.transition(state, self._aid_of(sym))
+
+            states = new_states
+
+            if not states:
+                return False
+
+        return any(state in self.final_sids for state in states)
+
     @contextmanager
     def edit(self):
         # Enter edit mode
