@@ -23,6 +23,15 @@ class Letter:
     char: str
     meta: dict[str, Any] = field(default_factory=dict)  # type: ignore
 
+    def kill(self) -> None:
+        self.meta["dead"] = True
+
+    def ensure_alive(self) -> None:
+        self.meta["dead"] = False
+
+    def is_dead(self) -> bool:
+        return self.meta.get("dead", False)
+
 
 class _Index:
     def __init__(self) -> None:
@@ -129,12 +138,22 @@ class DFAV2:
 
     @property
     def Σ(self) -> set[str]:
-        return {letter.char for letter in self.alphabet}
+        # only live letters
+        return {letter.char for letter in self.alphabet if not letter.is_dead()}
 
     @property
     def δ(self) -> dict[tuple[str, str], set[str]]:
-        return {(self.states[src].name, self.alphabet[sym].char):
-                {self.states[dst].name for dst in dsts if not self.states[dst].is_dead()} for (src, sym), dsts in self._tx.delta.items() if not self.states[src].is_dead()}
+        # live view: ignore dead sources and dead symbols; filter dead destinations
+        out: dict[tuple[str, str], set[str]] = {}
+        for (src_id, sym_id), dsts in self._tx.delta.items():
+            src = self.states[src_id]
+            sym = self.alphabet[sym_id]
+            if src.is_dead() or sym.is_dead():
+                continue
+            live_dsts = {
+                self.states[dst].name for dst in dsts if not self.states[dst].is_dead()}
+            out[(src.name, sym.char)] = live_dsts
+        return out
 
     @property
     def q0(self) -> str:
@@ -165,10 +184,13 @@ class DFAV2:
                 letter = Letter(char)
                 self.char_to_aid[char] = len(self.alphabet)
                 self.alphabet.append(letter)
+            else:
+                self.get_letter(char).ensure_alive()
 
     def add_transitions(self, transitions: Mapping[Tuple[str, str], Iterable[str] | str]) -> None:
         if not self._editing:
-            raise RuntimeError("Cannot add transitions outside of edit context.")
+            raise RuntimeError(
+                "Cannot add transitions outside of edit context.")
 
         # Bucket by (sid, aid) to minimize index mutations
         buckets: dict[tuple[int, int], set[int]] = {}
@@ -199,9 +221,22 @@ class DFAV2:
             self.states[self._sid_of(name)].kill()
         self.dirty_edges = True
 
+    def remove_letters(self, letters: Iterable[str]) -> None:
+        """
+        Mark letters as dead (do not purge edges). Live view/validity will ignore them.
+        Must be called inside `with self.edit():`.
+        """
+        if not self._editing:
+            raise RuntimeError(
+                "Cannot remove letters outside of edit context.")
+        for char in letters:
+            self.get_letter(char).kill()
+        self.dirty_edges = True
+
     def remove_transitions(self, transitions: Mapping[Tuple[str, str], Iterable[str] | str]) -> None:
         if not self._editing:
-            raise RuntimeError("Cannot remove transitions outside of edit context.")
+            raise RuntimeError(
+                "Cannot remove transitions outside of edit context.")
 
         # Bucket and then remove (ignores non-existent edges)
         buckets: dict[tuple[int, int], set[int]] = {}
@@ -225,20 +260,23 @@ class DFAV2:
 
     # --- validation ---
     def is_valid_dfa(self) -> bool:
-        # Every state must have exactly one outgoing edge per symbol
-        num_states = len(self.states)
-        num_syms = len(self.alphabet)
-        if num_states == 0 or num_syms == 0:
+        # Valid if every LIVE state has exactly one LIVE destination per LIVE symbol
+        if not any(not s.is_dead() for s in self.states):
             return False
-        for sid in range(num_states):
-            # if you later support "dead" states, you can skip them here if desired
-            if self.states[sid].is_dead():
+        if not any(not a.is_dead() for a in self.alphabet):
+            return False
+
+        for sid, s in enumerate(self.states):
+            if s.is_dead():
                 continue
-
-            for aid in range(num_syms):
-                dsts = [dst for dst in self._tx.delta.get((sid, aid), set()) if not self.states[dst].is_dead()]
-
-                if len(dsts) != 1:
+            for aid, a in enumerate(self.alphabet):
+                if a.is_dead():
+                    continue
+                live_dsts = {
+                    d for d in self._tx.delta.get((sid, aid), set())
+                    if not self.states[d].is_dead()
+                }
+                if len(live_dsts) != 1:
                     return False
         return True
 

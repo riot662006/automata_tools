@@ -423,3 +423,81 @@ def test_remove_states_only_kills_and_requires_edit(built_simple_dfa: DFAV2):
             dfa.remove_states(["S"])
             assert dfa.get_state("S").is_dead()
             # exit raises because other states (A) now have a missing live dst on 'b' or 'a' depending on wiring
+
+# ---------------------------------------------------------------------
+# Killable letters
+# ---------------------------------------------------------------------
+def test_remove_letters_requires_edit(built_simple_dfa: DFAV2):
+    dfa = built_simple_dfa
+    with pytest.raises(RuntimeError):
+        dfa.remove_letters(["a"])  # type: ignore[attr-defined]
+
+
+def test_killing_letter_shrinks_sigma_and_delta(built_simple_dfa: DFAV2):
+    dfa = built_simple_dfa
+
+    # Kill 'a' -> Σ should drop 'a'; δ should only have 'b' keys
+    with dfa.edit():
+        dfa.remove_letters(["a"])  # type: ignore[attr-defined]
+
+    assert dfa.Σ == {"b"}
+    assert set(dfa.δ.keys()) == {("S", "b"), ("A", "b")}
+    # Still valid: we only require one live dst per LIVE letter
+    assert dfa.is_valid_dfa()
+
+
+def test_kill_all_letters_makes_invalid(built_simple_dfa: DFAV2):
+    dfa = built_simple_dfa
+    with pytest.raises(ValueError):
+        with dfa.edit():
+            dfa.remove_letters(["a", "b"])  # type: ignore[attr-defined]
+            # exit should fail (no live letters)
+
+
+def test_revive_letter_via_add_letters(built_simple_dfa: DFAV2):
+    dfa = built_simple_dfa
+    with dfa.edit():
+        dfa.remove_letters(["a"])  # kill 'a'
+        # revive 'a'
+        dfa.add_letters({"a"})
+
+        # To remain valid, there must be exactly 1 live dst for every live (state,'a')
+        # Our original construction satisfies this already since edges were kept.
+        # If you'd removed a state's 'a' edge earlier, you'd need to re-add it here.
+
+    assert "a" in dfa.Σ
+    assert dfa.is_valid_dfa()
+
+
+def test_delta_filters_dead_letters_even_if_edges_exist(simple_dfa_spec: DFA_Params):
+    Q, Sigma, delta, q0, F = simple_dfa_spec
+    dfa = DFAV2(Q, Sigma, delta, q0, F)
+
+    with dfa.edit():
+        dfa.remove_letters(["a"])
+
+    # Raw index still has ('*','a') edges
+    sid_S, sid_A = dfa._sid_of("S"), dfa._sid_of("A")  # type: ignore
+    aid_a = dfa._aid_of("a")  # type: ignore
+    assert dfa._tx.delta.get((sid_S, aid_a)) == {sid_A}  # type: ignore
+
+    # Live view hides them
+    assert ("S", "a") not in dfa.δ
+    assert ("A", "a") not in dfa.δ
+
+
+def test_letter_kill_plus_state_kill_composition(simple_dfa_spec: DFA_Params):
+    Q, Sigma, delta, q0, F = simple_dfa_spec
+    dfa = DFAV2(Q, Sigma, delta, q0, F)
+
+    with dfa.edit():
+        dfa.remove_letters(["a"])
+        dfa.remove_states(["A"])
+
+    # Σ only 'b'; Q only 'S'
+    assert dfa.Σ == {"b"}
+    assert dfa.Q == {"S"}
+
+    # δ only contains ("S","b") -> {"S"}
+    assert dfa.δ == {("S", "b"): {"S"}}
+    assert dfa.is_valid_dfa()
