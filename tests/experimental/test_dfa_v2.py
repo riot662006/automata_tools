@@ -427,6 +427,8 @@ def test_remove_states_only_kills_and_requires_edit(built_simple_dfa: DFAV2):
 # ---------------------------------------------------------------------
 # Killable letters
 # ---------------------------------------------------------------------
+
+
 def test_remove_letters_requires_edit(built_simple_dfa: DFAV2):
     dfa = built_simple_dfa
     with pytest.raises(RuntimeError):
@@ -501,3 +503,50 @@ def test_letter_kill_plus_state_kill_composition(simple_dfa_spec: DFA_Params):
     # δ only contains ("S","b") -> {"S"}
     assert dfa.δ == {("S", "b"): {"S"}}
     assert dfa.is_valid_dfa()
+
+# ---------------------------------------------------------------------
+# _Index lazy caches (no external version)
+# ---------------------------------------------------------------------
+
+
+def test_index_lazy_views_build_and_refresh():
+    idx = _Index()
+
+    # Initially empty; accessing views builds empty caches
+    assert idx.out == {}
+    assert idx.inn == {}
+    assert idx.edges == {}
+
+    # Add a few edges; caches should reflect updates after invalidation+rebuild
+    idx.add(0, 0, 1)  # 0 --a--> 1
+    assert idx.out[0][0] == {1}
+    assert idx.inn[1][0] == {0}
+    assert (0, 0, 1) in idx.edges[0]
+
+    # Add another edge on same key
+    idx.add(0, 0, 2)
+    assert idx.out[0][0] == {1, 2}
+    assert idx.inn[2][0] == {0}
+    assert any(t == (0, 0, 2) for t in idx.edges[0])
+
+    # Remove one edge
+    idx.remove(0, 0, 1)
+    assert idx.out[0][0] == {2}
+    assert 1 not in idx.inn  # removed
+
+    # Replace edges for a different symbol
+    idx.set(0, 1, (3,))
+    assert idx.out[0][1] == {3}
+    assert idx.inn[3][1] == {0}
+
+    # set empty → delete key
+    idx.set(0, 1, ())
+    assert 1 not in idx.out.get(0, {})
+    assert 1 not in idx.inn.get(3, {})
+
+    # Clear all
+    idx.clear()
+    assert idx.delta == {}
+    assert idx.out == {}
+    assert idx.inn == {}
+    assert idx.edges == {}

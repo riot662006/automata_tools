@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
+from typing import Any, Iterable, Mapping, Tuple
 
 
 @dataclass
@@ -35,51 +35,95 @@ class Letter:
 
 class _Index:
     def __init__(self) -> None:
-        # delta: (src_id, sym_id) -> set(dst_ids)
-        self.delta: Dict[Tuple[int, int], Set[int]] = {}
-        # out: src_id -> sym_id -> set(dst_ids)
-        self.out: Dict[int, Dict[int, Set[int]]] = {}
-        # inn: dst_id -> sym_id -> set(src_ids)
-        self.inn: Dict[int, Dict[int, Set[int]]] = {}
+        # Core transition map
+        self.delta: dict[tuple[int, int], set[int]] = {}
 
+        # Lazy caches
+        self._out: dict[int, dict[int, set[int]]] | None = None
+        self._inn: dict[int, dict[int, set[int]]] | None = None
+        self._edges: dict[int, list[tuple[int, int, int]]] | None = None
+
+    # -------------------------------------------------------------
+    # Internal cache invalidation
+    # -------------------------------------------------------------
+    def _invalidate(self) -> None:
+        """Clear all derived caches."""
+        self._out = None
+        self._inn = None
+        self._edges = None
+
+    # -------------------------------------------------------------
+    # Lazy construction utilities
+    # -------------------------------------------------------------
+    def _ensure_out_inn(self) -> None:
+        if self._out is not None and self._inn is not None:
+            return
+        out: dict[int, dict[int, set[int]]] = {}
+        inn: dict[int, dict[int, set[int]]] = {}
+        for (src, sym), dsts in self.delta.items():
+            out.setdefault(src, {}).setdefault(sym, set()).update(dsts)
+            for dst in dsts:
+                inn.setdefault(dst, {}).setdefault(sym, set()).add(src)
+        self._out = out
+        self._inn = inn
+
+    def _ensure_edges(self) -> None:
+        if self._edges is not None:
+            return
+        edges: dict[int, list[tuple[int, int, int]]] = {}
+        for (src, sym), dsts in self.delta.items():
+            edges.setdefault(src, []).extend((src, sym, dst) for dst in dsts)
+        self._edges = edges
+
+    # -------------------------------------------------------------
+    # Public read-only accessors
+    # -------------------------------------------------------------
+    @property
+    def out(self) -> dict[int, dict[int, set[int]]]:
+        self._ensure_out_inn()
+        return self._out or {}
+
+    @property
+    def inn(self) -> dict[int, dict[int, set[int]]]:
+        self._ensure_out_inn()
+        return self._inn or {}
+
+    @property
+    def edges(self) -> dict[int, list[tuple[int, int, int]]]:
+        self._ensure_edges()
+        return self._edges or {}
+
+    # -------------------------------------------------------------
+    # Mutation methods (always clear caches)
+    # -------------------------------------------------------------
     def add(self, src: int, sym: int, dst: int) -> None:
-        self.delta.setdefault((src, sym), set()).add(dst)
-        self.out.setdefault(src, {}).setdefault(sym, set()).add(dst)
-        self.inn.setdefault(dst, {}).setdefault(sym, set()).add(src)
-
-    def set(self, src: int, sym: int, dsts: Iterable[int]) -> None:
-        # remove all prior edges for (src, sym)
-        for dst in list(self.delta.get((src, sym), ())):
-            self.remove(src, sym, dst)
-        # add new set
-        for dst in dsts:
-            self.add(src, sym, dst)
+        """Add a single transition (src, sym -> dst)."""
+        row = self.delta.setdefault((src, sym), set())
+        if dst not in row:
+            row.add(dst)
+            self._invalidate()
 
     def remove(self, src: int, sym: int, dst: int) -> None:
-        key = (src, sym)
-        row = self.delta.get(key)
+        """Remove a single transition if present."""
+        row = self.delta.get((src, sym))
         if not row or dst not in row:
             return
-
         row.remove(dst)
         if not row:
-            del self.delta[key]
+            del self.delta[(src, sym)]
+        self._invalidate()
 
-        out_row = self.out.get(src, {}).get(sym)
-        if out_row:
-            out_row.discard(dst)
-            if not out_row:
-                self.out[src].pop(sym, None)
-            if not self.out[src]:
-                self.out.pop(src, None)
+    def set(self, src: int, sym: int, dsts: Iterable[int]) -> None:
+        """Replace all transitions for (src, sym)."""
+        self.delta[(src, sym)] = set(dsts)
+        if not self.delta[(src, sym)]:
+            del self.delta[(src, sym)]
+        self._invalidate()
 
-        inn_row = self.inn.get(dst, {}).get(sym)
-        if inn_row:
-            inn_row.discard(src)
-            if not inn_row:
-                self.inn[dst].pop(sym, None)
-            if not self.inn[dst]:
-                self.inn.pop(dst, None)
+    def clear(self) -> None:
+        """Clear all transitions."""
+        self.delta.clear()
+        self._invalidate()
 
 
 class DFAV2:
@@ -98,11 +142,6 @@ class DFAV2:
         self.char_to_aid: dict[str, int] = {}
 
         self._tx = _Index()
-
-        # Optional cache for a user-facing view of edges
-        self.edges_cache: Optional[Dict[str,
-                                        Dict[str, Tuple[str, ...]]]] = None
-        self.dirty_edges = True
 
         # Important: define _editing before entering the context
         self._editing = False
@@ -211,15 +250,12 @@ class DFAV2:
             for did in new_dids:
                 self._tx.add(sid, aid, did)
 
-        self.dirty_edges = True
-
     def remove_states(self, states: Iterable[str]) -> None:
         if not self._editing:
             raise RuntimeError(
                 "Cannot remove states outside of edit context.")
         for name in states:
             self.states[self._sid_of(name)].kill()
-        self.dirty_edges = True
 
     def remove_letters(self, letters: Iterable[str]) -> None:
         """
@@ -231,7 +267,6 @@ class DFAV2:
                 "Cannot remove letters outside of edit context.")
         for char in letters:
             self.get_letter(char).kill()
-        self.dirty_edges = True
 
     def remove_transitions(self, transitions: Mapping[Tuple[str, str], Iterable[str] | str]) -> None:
         if not self._editing:
@@ -255,8 +290,6 @@ class DFAV2:
         for (sid, aid), dids in buckets.items():
             for did in dids:
                 self._tx.remove(sid, aid, did)
-
-        self.dirty_edges = True
 
     # --- validation ---
     def is_valid_dfa(self) -> bool:
