@@ -216,7 +216,7 @@ def test_properties_after_killing_nonfinal_state(simple_dfa_spec: DFA_Params):
     assert dfa2.δ == expected_delta
 
     # F excludes dead states (A wasn't final here anyway)
-    assert dfa2.F == {"S"}
+    assert dfa2.F == {"S"} 
 
 
 def test_properties_after_killing_final_state(built_simple_dfa: DFAV2):

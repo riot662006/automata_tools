@@ -166,14 +166,17 @@ class DFAV2:
                 self.char_to_aid[char] = len(self.alphabet)
                 self.alphabet.append(letter)
 
-    def add_transitions(self, transitions: Mapping[Tuple[str, str], str]) -> None:
+    def add_transitions(self, transitions: Mapping[Tuple[str, str], Iterable[str] | str]) -> None:
         if not self._editing:
             raise RuntimeError(
                 "Cannot add transitions outside of edit context.")
         # DFA semantics: exactly one dst per (src, sym) — use set() to hard-replace
-        for (src, sym), dst in transitions.items():
-            self.tx.set(self._sid_of(src), self._aid_of(
-                sym), (self._sid_of(dst),))
+        for (src, sym), dsts in transitions.items():
+            if isinstance(dsts, str):
+                dsts = [dsts]
+            for dst in dsts:
+                self.tx.add(self._sid_of(src), self._aid_of(
+                    sym), self._sid_of(dst))
         self.dirty_edges = True
 
     # --- validation ---
