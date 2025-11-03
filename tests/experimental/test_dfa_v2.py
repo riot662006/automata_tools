@@ -81,7 +81,7 @@ def test_construct_valid_dfa(built_simple_dfa: DFAV2):
     # each (state, symbol) has exactly one dst
     for sid in range(len(dfa.states)):
         for aid in range(len(dfa.alphabet)):
-            dsts = dfa.tx.delta.get((sid, aid))
+            dsts = dfa._tx.delta.get((sid, aid))  # type: ignore
             assert dsts is not None and len(dsts) == 1
 
 
@@ -138,7 +138,7 @@ def test_invalid_when_multiple_dsts_for_pair(simple_dfa_spec: DFA_Params):
             sid = dfa._sid_of("S")  # type: ignore
             aid = dfa._aid_of("a")  # type: ignore
             # sneaky low-level add; your public API prevents this, but test the invariant anyway
-            dfa.tx.add(sid, aid, dfa._sid_of("S"))  # type: ignore
+            dfa._tx.add(sid, aid, dfa._sid_of("S"))  # type: ignore
 
 
 def test_empty_Q_or_Sigma_is_invalid():

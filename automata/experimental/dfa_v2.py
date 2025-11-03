@@ -88,7 +88,7 @@ class DFAV2:
         self.alphabet: list[Letter] = []
         self.char_to_aid: dict[str, int] = {}
 
-        self.tx = _Index()
+        self._tx = _Index()
 
         # Optional cache for a user-facing view of edges
         self.edges_cache: Optional[Dict[str,
@@ -134,7 +134,7 @@ class DFAV2:
     @property
     def δ(self) -> dict[tuple[str, str], set[str]]:
         return {(self.states[src].name, self.alphabet[sym].char):
-                {self.states[dst].name for dst in dsts if not self.states[dst].is_dead()} for (src, sym), dsts in self.tx.delta.items() if not self.states[src].is_dead()}
+                {self.states[dst].name for dst in dsts if not self.states[dst].is_dead()} for (src, sym), dsts in self._tx.delta.items() if not self.states[src].is_dead()}
 
     @property
     def q0(self) -> str:
@@ -175,7 +175,7 @@ class DFAV2:
             if isinstance(dsts, str):
                 dsts = [dsts]
             for dst in dsts:
-                self.tx.add(self._sid_of(src), self._aid_of(
+                self._tx.add(self._sid_of(src), self._aid_of(
                     sym), self._sid_of(dst))
         self.dirty_edges = True
 
@@ -192,7 +192,7 @@ class DFAV2:
                 continue
 
             for aid in range(num_syms):
-                dsts = self.tx.delta.get((sid, aid), set())
+                dsts = self._tx.delta.get((sid, aid), set())
                 if len(dsts) != 1:
                     return False
         return True
