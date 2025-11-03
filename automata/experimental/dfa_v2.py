@@ -8,7 +8,7 @@ class State:
     name: str
     meta: dict[str, Any] = field(default_factory=dict)  # type: ignore
 
-    def _kill(self) -> None:
+    def kill(self) -> None:
         self.meta["dead"] = True
 
     def ensure_alive(self) -> None:
@@ -168,15 +168,59 @@ class DFAV2:
 
     def add_transitions(self, transitions: Mapping[Tuple[str, str], Iterable[str] | str]) -> None:
         if not self._editing:
-            raise RuntimeError(
-                "Cannot add transitions outside of edit context.")
-        # DFA semantics: exactly one dst per (src, sym) — use set() to hard-replace
+            raise RuntimeError("Cannot add transitions outside of edit context.")
+
+        # Bucket by (sid, aid) to minimize index mutations
+        buckets: dict[tuple[int, int], set[int]] = {}
+
         for (src, sym), dsts in transitions.items():
             if isinstance(dsts, str):
-                dsts = [dsts]
-            for dst in dsts:
-                self._tx.add(self._sid_of(src), self._aid_of(
-                    sym), self._sid_of(dst))
+                dst_iter = (dsts,)
+            else:
+                dst_iter = dsts
+            sid = self._sid_of(src)
+            aid = self._aid_of(sym)
+            b = buckets.setdefault((sid, aid), set())
+            for dst in dst_iter:
+                b.add(self._sid_of(dst))
+
+        # Additive semantics: keep existing + union new (do NOT purge; you rely on “ignore dead”)
+        for (sid, aid), new_dids in buckets.items():
+            for did in new_dids:
+                self._tx.add(sid, aid, did)
+
+        self.dirty_edges = True
+
+    def remove_states(self, states: Iterable[str]) -> None:
+        if not self._editing:
+            raise RuntimeError(
+                "Cannot remove states outside of edit context.")
+        for name in states:
+            self.states[self._sid_of(name)].kill()
+        self.dirty_edges = True
+
+    def remove_transitions(self, transitions: Mapping[Tuple[str, str], Iterable[str] | str]) -> None:
+        if not self._editing:
+            raise RuntimeError("Cannot remove transitions outside of edit context.")
+
+        # Bucket and then remove (ignores non-existent edges)
+        buckets: dict[tuple[int, int], set[int]] = {}
+
+        for (src, sym), dsts in transitions.items():
+            if isinstance(dsts, str):
+                dst_iter = (dsts,)
+            else:
+                dst_iter = dsts
+            sid = self._sid_of(src)
+            aid = self._aid_of(sym)
+            b = buckets.setdefault((sid, aid), set())
+            for dst in dst_iter:
+                b.add(self._sid_of(dst))
+
+        for (sid, aid), dids in buckets.items():
+            for did in dids:
+                self._tx.remove(sid, aid, did)
+
         self.dirty_edges = True
 
     # --- validation ---
@@ -192,7 +236,8 @@ class DFAV2:
                 continue
 
             for aid in range(num_syms):
-                dsts = self._tx.delta.get((sid, aid), set())
+                dsts = [dst for dst in self._tx.delta.get((sid, aid), set()) if not self.states[dst].is_dead()]
+
                 if len(dsts) != 1:
                     return False
         return True
