@@ -101,7 +101,7 @@ class NFA(RegAuto):
         # Throw if user tries to remove ε
         if self._EPSILON_CHAR in letters:
             raise RuntimeError("Cannot remove the reserved epsilon letter.")
-        
+
         if not letters:
             return
         return super().remove_letters(letters)
@@ -154,6 +154,10 @@ class NFA(RegAuto):
         NFA move on a single non-epsilon symbol from the ε-closure of s_id.
         (You can still call with ε aid directly; it will behave like RegAuto.transition.)
         """
+        # make sure not editing at the same time
+        if self._editing:
+            raise RuntimeError("Cannot call NFA transition while editing.")
+
         # If caller passes ε, keep base behavior:
         if a_id in self._reserved_aids:
             return super().transition(s_id, a_id, throw_on_dead=throw_on_dead)
