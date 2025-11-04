@@ -52,6 +52,59 @@ def test_epsilon_is_reserved_and_hidden_from_Sigma(built_nfa: NFA):
         with nfa.edit():
             nfa.rename_letter("ε", "e")
 
+def test_eps_closure_cached_and_invalidated():
+    Q = {"S", "A", "F"}
+    Σ = {"a"}
+    δ: NFA_Delta = {
+        ("S", "ε"): "A",  # closure(S) = {S,A}
+        ("A", "a"): "F",
+    }
+    nfa = NFA(Q, Σ, δ, "S", {"F"})
+
+    sid_S = nfa._sid_of("S")  # type: ignore
+    sid_A = nfa._sid_of("A")  # type: ignore
+
+    # First call populates cache
+    c1 = nfa._eps_closure_single(sid_S)  # type: ignore
+    assert c1 == {sid_S, sid_A}
+    assert sid_S in nfa._eps_closure_cache # type: ignore
+
+    # Second call hits cache (identity not guaranteed, but membership is)
+    c2 = nfa._eps_closure_single(sid_S) # type: ignore
+    assert c2 == {sid_S, sid_A}
+
+    # After an edit that changes ε-graph, cache is cleared
+    with nfa.edit():
+        # add A --ε--> S (makes closure the same set, but we can observe cache clear)
+        nfa.add_transitions({("A", "ε"): "S"})
+    assert nfa._eps_closure_cache == {} # type: ignore
+
+    # Cache repopulates on demand with new structure
+    c3 = nfa._eps_closure_single(sid_S) # type: ignore
+    assert c3 == {sid_S, sid_A}  # still both, now via a cycle
+
+
+def test_accepts_uses_cached_closure_midstring():
+    # NFA for "ab" via ε bridge M -> N
+    Q = {"S", "M", "N", "F"}
+    Σ = {"a", "b"}
+    δ: NFA_Delta = {
+        ("S", "a"): "M",
+        ("M", "ε"): "N",
+        ("N", "b"): "F",
+    }
+    nfa = NFA(Q, Σ, δ, "S", {"F"})
+
+    # warm cache
+    _ = nfa._eps_closure_single(nfa._sid_of("S"))  # type: ignore
+
+    # accepts should succeed; internally it will reuse cached closure for start,
+    # then cache closure for N on the second step.
+    assert nfa.accepts("ab")
+    assert not nfa.accepts("a")
+    assert not nfa.accepts("b")
+
+
 
 # --- Accepts semantics with ε-closure --------------------------------
 def test_accepts_with_epsilon_closure(built_nfa: NFA):
@@ -179,3 +232,4 @@ def test_epsilon_branch_union():
 
     # but not 'bb' (only single b supported)
     assert not nfa.accepts("bb")
+

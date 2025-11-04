@@ -33,6 +33,9 @@ class NFA(RegAuto):
         self._epsilon_aid = 0
         self._reserved_aids = {self._epsilon_aid}
 
+        # Cache for ε-closure computation.
+        self._eps_closure_cache: dict[int, set[int]] = {}
+
         self._tx = RegAuto._Index()
         self._editing = False
 
@@ -48,6 +51,42 @@ class NFA(RegAuto):
 
         self.start_sid = self._sid_of(q0)
         self.final_sids: set[int] = {self._sid_of(f) for f in F}
+
+    # ---------------- cache helpers ----------------
+    def _invalidate_eps_cache(self) -> None:
+        self._eps_closure_cache.clear()
+
+    def _eps_closure_single(self, sid: int) -> set[int]:
+        """Compute ε-closure({sid}) with lazy memoization (live states only)."""
+        if sid in self._eps_closure_cache:
+            return self._eps_closure_cache[sid]
+
+        if self.states[sid].is_dead():
+            res: set[int] = set()
+            self._eps_closure_cache[sid] = res
+            return res
+
+        eps = self._epsilon_aid
+        seen: set[int] = set()
+        stack = [sid]
+        while stack:
+            u = stack.pop()
+            if u in seen or self.states[u].is_dead():
+                continue
+            seen.add(u)
+            for v in self._tx.delta.get((u, eps), set()):
+                if not self.states[v].is_dead() and v not in seen:
+                    stack.append(v)
+
+        self._eps_closure_cache[sid] = seen
+        return seen
+
+    def _eps_closure(self, sids: Iterable[int]) -> set[int]:
+        """Union of memoized singleton closures."""
+        out: set[int] = set()
+        for sid in sids:
+            out |= self._eps_closure_single(sid)
+        return out
 
     # -------------- Overrides to protect ε --------------
 
@@ -110,22 +149,6 @@ class NFA(RegAuto):
 
     # -------------- NFA semantics --------------
 
-    def _eps_closure(self, sids: Iterable[int]) -> set[int]:
-        """ε-closure over live states using reserved epsilon aid."""
-        eps = self._epsilon_aid
-        live = {sid for sid in sids if not self.states[sid].is_dead()}
-        stack = list(live)
-        seen = set(live)
-        while stack:
-            sid = stack.pop()
-            for dst in self._tx.delta.get((sid, eps), set()):
-                if self.states[dst].is_dead():
-                    continue
-                if dst not in seen:
-                    seen.add(dst)
-                    stack.append(dst)
-        return seen
-
     def transition(self, s_id: int, a_id: int, throw_on_dead: bool = True) -> set[int]:
         """
         NFA move on a single non-epsilon symbol from the ε-closure of s_id.
@@ -175,3 +198,5 @@ class NFA(RegAuto):
         # ensure epsilon remains live
         if self.alphabet[self._epsilon_aid].is_dead():
             raise ValueError("Invalid NFA: epsilon must remain live.")
+
+        self._invalidate_eps_cache()
