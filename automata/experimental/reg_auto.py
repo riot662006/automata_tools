@@ -293,23 +293,6 @@ class RegAuto:
         for ch in letters:
             self.get_letter(ch).kill()
 
-    # --- validation / execution ---
-    def is_valid_dfa(self) -> bool:
-        if not any(not s.is_dead() for s in self.states):
-            return False
-        if not any(not a.is_dead() for a in self.alphabet):
-            return False
-        for sid, s in enumerate(self.states):
-            if s.is_dead():
-                continue
-            for aid, a in enumerate(self.alphabet):
-                if a.is_dead():
-                    continue
-                live_dsts = {d for d in self._tx.delta.get((sid, aid), set()) if not self.states[d].is_dead()}
-                if len(live_dsts) != 1:
-                    return False
-        return True
-
     def transition(self, s_id: int, a_id: int, throw_on_dead: bool = True) -> set[int]:
         s, a = self.states[s_id], self.alphabet[a_id]
         if throw_on_dead and s.is_dead():
@@ -332,6 +315,9 @@ class RegAuto:
             if not states:
                 return False
         return any(sid in self.final_sids for sid in states)
+    
+    def validate_edit(self):
+        pass
 
     @contextmanager
     def edit(self):
@@ -341,7 +327,4 @@ class RegAuto:
             yield self
         finally:
             self._editing = was
-            if not self.is_valid_dfa():
-                raise ValueError(
-                    "Invalid DFA after edit() — each (state, symbol) must have exactly one destination."
-                )
+            self.validate_edit()
