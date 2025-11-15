@@ -1,7 +1,9 @@
 # automata/experimental/reg_auto.py
-from typing import Iterable
+from typing import Iterable, Mapping
 import weakref
 
+
+from automata.experimental.dfa import DFA
 from automata.experimental.reg_auto import RegAuto
 
 
@@ -17,7 +19,7 @@ class NFA(RegAuto):
         self,
         Q: set[str],
         Σ: set[str],
-        δ: dict[tuple[str, str], Iterable[str] | str],
+        δ: Mapping[tuple[str, str], Iterable[str] | str],
         q0: str,
         F: set[str],
     ):
@@ -204,3 +206,9 @@ class NFA(RegAuto):
             raise ValueError("Invalid NFA: epsilon must remain live.")
 
         self._invalidate_eps_cache()
+
+    # -------------- Conversion --------------
+
+    @classmethod
+    def from_dfa(cls, dfa: DFA):
+        return cls(dfa.Q, dfa.Σ, dfa.δ, dfa.q0, dfa.F)
